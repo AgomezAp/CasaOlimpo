@@ -1,0 +1,82 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.Consulta = void 0;
+const sequelize_1 = require("sequelize");
+const connection_1 = __importDefault(require("../database/connection"));
+class Consulta extends sequelize_1.Model {
+}
+exports.Consulta = Consulta;
+Consulta.init({
+    Cid: {
+        type: sequelize_1.DataTypes.INTEGER,
+        autoIncrement: true,
+        primaryKey: true
+    },
+    Motivo: {
+        type: sequelize_1.DataTypes.STRING,
+        allowNull: false
+    },
+    enfermedad_actual: {
+        type: sequelize_1.DataTypes.STRING,
+        allowNull: false
+    },
+    objetivos_terapia: {
+        type: sequelize_1.DataTypes.STRING,
+        allowNull: false
+    },
+    historia_problema: {
+        type: sequelize_1.DataTypes.STRING,
+        allowNull: false
+    },
+    desarrollo: {
+        type: sequelize_1.DataTypes.STRING,
+        allowNull: false
+    },
+    plan_terapeutico: {
+        type: sequelize_1.DataTypes.STRING,
+        allowNull: false
+    },
+    tipo_diagnostico: {
+        type: sequelize_1.DataTypes.STRING,
+        allowNull: false
+    },
+    analisis_diagnostico: {
+        type: sequelize_1.DataTypes.STRING,
+        allowNull: false
+    },
+    plan_tratamiento: {
+        type: sequelize_1.DataTypes.STRING,
+        allowNull: false
+    },
+    recomendaciones: {
+        type: sequelize_1.DataTypes.STRING,
+        allowNull: false
+    },
+    numero_documento: {
+        type: sequelize_1.DataTypes.STRING,
+        allowNull: false,
+        references: {
+            model: 'Paciente',
+            key: 'numero_documento'
+        },
+    },
+    fecha: {
+        type: sequelize_1.DataTypes.DATE,
+        allowNull: false
+    },
+    Uid: {
+        type: sequelize_1.DataTypes.INTEGER,
+        allowNull: false,
+        references: {
+            model: 'User',
+            key: 'numero_documento'
+        },
+    }
+}, {
+    sequelize: connection_1.default,
+    tableName: "Consulta",
+    timestamps: false,
+});
