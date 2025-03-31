@@ -76,7 +76,15 @@ Consulta.init({
             model: 'User',
             key: 'correo'
         },
-    }
+    },
+    consentimiento_info: {
+        type: sequelize_1.DataTypes.BLOB('long'),
+        allowNull: true,
+    },
+    consentimiento_check: {
+        type: sequelize_1.DataTypes.BOOLEAN,
+        allowNull: true,
+    },
 }, {
     sequelize: connection_1.default,
     tableName: "Consulta",

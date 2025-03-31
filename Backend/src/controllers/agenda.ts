@@ -2,63 +2,81 @@ import { Request, Response } from "express";
 import { Agenda } from "../models/agenda";
 import { User } from "../models/user";
 import { Paciente } from "../models/paciente";
+import dayjs from "dayjs";
 
 
 export const crearCita = async (req: Request, res: Response): Promise<any> => {
-    const { correo, numero_documento, fecha_cita, hora_cita, estado } = req.body;
-  
-    try {
-      // Validar si el doctor (User) existe
-      const doctor = await User.findOne({ where: { correo } });
-      if (!doctor) {
-        return res.status(404).json({
-          message: "El doctor con el correo proporcionado no existe.",
-        });
-      }
-  
-      // Validar si el paciente (Paciente) existe
-      const paciente = await Paciente.findOne({ where: { numero_documento } });
-      if (!paciente) {
-        return res.status(404).json({
-          message: "El paciente con el número de documento proporcionado no existe.",
-        });
-      }
-  
-      // Validar si ya existe una cita en la misma fecha y hora para el mismo doctor
-      const citaExistente = await Agenda.findOne({
-        where: {
-          fecha_cita,
-          hora_cita,
-          correo, // Validar que no haya solapamiento para el mismo doctor
-        },
-      });
-  
-      if (citaExistente) {
+  const { correo, numero_documento, fecha_cita, hora_cita, estado } = req.body;
+
+  try {
+    // Formatear y validar fecha primero
+    const fechaFormateada = dayjs(fecha_cita, "YYYY-MM-DD");
+    if (!fechaFormateada.isValid()) {
         return res.status(400).json({
-          message: "Ya existe una cita programada para el doctor en la misma fecha y hora.",
+            message: "Formato de fecha inválido. Use YYYY-MM-DD",
         });
-      }
-  
-      // Crear la nueva cita si no hay solapamiento
-      const nuevaCita = await Agenda.create({
-        correo,
-        numero_documento,
-        fecha_cita,
-        hora_cita,
-        estado,
-      });
-  
-      return res.status(201).json({
-        message: "Cita creada correctamente",
-        data: nuevaCita,
-      });
-    } catch (err: any) {
-      res.status(500).json({
-        message: "Error creando la cita",
-        error: err.message,
+    }
+    
+    // Validar formato de hora
+    const horaRegex = /^([01]?[0-9]|2[0-3]):([0-5][0-9])(?::([0-5][0-9]))?$/;
+    if (!horaRegex.test(hora_cita)) {
+        return res.status(400).json({
+            message: "Formato de hora inválido. Use HH:MM o HH:MM:SS",
+        });
+    }
+
+    // Validar si el doctor existe
+    const doctor = await User.findOne({ where: { correo } });
+    if (!doctor) {
+      return res.status(404).json({
+        message: "El doctor con el correo proporcionado no existe.",
       });
     }
-  };
+
+    // Validar si el paciente existe
+    const paciente = await Paciente.findOne({ where: { numero_documento } });
+    if (!paciente) {
+      return res.status(404).json({
+        message: "El paciente con el número de documento proporcionado no existe.",
+      });
+    }
+
+    // AQUÍ ESTÁ LA CORRECCIÓN - Usar la fecha formateada para verificar solapamiento
+    const citaExistente = await Agenda.findOne({
+      where: {
+        fecha_cita: fechaFormateada.toDate(), // Usar fecha formateada
+        hora_cita,
+        correo,
+      },
+    });
+    
+    if (citaExistente) {
+      return res.status(400).json({
+        message: "Ya existe una cita programada para el doctor en la misma fecha y hora.",
+      });
+    }
+    
+    // Crear la cita con fecha formateada
+    const nuevaCita = await Agenda.create({
+      correo,
+      numero_documento,
+      fecha_cita: fechaFormateada.toDate(), // Guardar con formato correcto
+      hora_cita,
+      estado: estado || "Pendiente", // Valor por defecto
+    });
+
+    return res.status(201).json({
+      message: "Cita creada correctamente",
+      data: nuevaCita,
+    });
+  } catch (err: any) {
+    console.error("Error creando cita:", err);
+    res.status(500).json({
+      message: "Error creando la cita",
+      error: err.message,
+    });
+  }
+};
 
   export const actualizarCita = async (req: Request, res: Response): Promise<any> => {
 
@@ -122,27 +140,57 @@ export const eliminarCita = async (req: Request, res: Response): Promise<any> =>
     }
 };
 export const obtenerCitas = async (req: Request, res: Response): Promise<any> => {
-    try {
-        const citas = await Agenda.findAll({
-            include: [
-                {
-                    model: User,
-                    as: 'doctor', 
-                    attributes: ['nombre', 'apellido'], 
-                },
-                {
-                    model: Paciente,
-                    as: 'paciente', 
-                    attributes: ['nombre', 'apellido', 'telefono'], 
-                },
-            ],
-        });
+  try {
+      // Si estás usando req.params.correo o req.params.numero_documento
+      // asegúrate de que sea string:
+      const { correo, numero_documento } = req.params;
+      
+      // Busca con los tipos correctos
+      const citas = await Agenda.findAll({
+          where: {
+              // Asegúrate que los valores sean del tipo correcto
+              ...(correo && { correo: String(correo) }),
+              ...(numero_documento && { numero_documento: String(numero_documento) })
+          },
+          include: [
+              { model: User, as: "doctor" },
+              { model: Paciente, as: "paciente" }
+          ]
+      });
 
-        return res.status(200).json(citas);
-    } catch (err: any) {
-        res.status(500).json({
-            message: "Error obteniendo las citas",
-            error: err.message,
-        });
-    }
+      return res.status(200).json({
+          message: "Citas obtenidas correctamente",
+          data: citas
+      });
+  } catch (err: any) {
+      console.error("Error obteniendo las citas:", err);
+      res.status(500).json({
+          message: "Error obteniendo las citas",
+          error: err.message
+      });
+  }
 };
+
+export const obtenerCitasPorDoctor = async (req: Request, res: Response): Promise<any> => {
+  const {numero_documento} = req.params;
+  try {
+    const citas = await Agenda.findAll({
+      where: {
+        numero_documento: numero_documento,
+      },
+      include: [
+        { model: User, as: "doctor" },
+        { model: Paciente, as: "paciente" }
+      ]
+    });
+    return res.status(200).json({
+      message: "Citas obtenidas correctamente",
+      data: citas,
+    });
+  } catch (err: any) {
+    res.status(500).json({
+      message: "Error obteniendo las citas",
+      error: err.message,
+    });
+  }
+}

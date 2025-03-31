@@ -15,42 +15,43 @@ Agenda.init({
     Aid: {
         type: sequelize_1.DataTypes.INTEGER,
         autoIncrement: true,
-        primaryKey: true
+        primaryKey: true,
     },
     correo: {
         type: sequelize_1.DataTypes.STRING,
         allowNull: false,
         references: {
-            model: 'User',
-            key: 'correo'
+            model: "User",
+            key: "correo",
         },
     },
     numero_documento: {
         type: sequelize_1.DataTypes.STRING,
         allowNull: false,
         references: {
-            model: 'Paciente',
-            key: 'numero_documento',
+            model: "Paciente",
+            key: "numero_documento",
         },
     },
     fecha_cita: {
         type: sequelize_1.DataTypes.DATE,
-        allowNull: false
+        allowNull: false,
     },
     hora_cita: {
         type: sequelize_1.DataTypes.TIME,
-        allowNull: false
+        allowNull: false,
     },
     estado: {
-        type: sequelize_1.DataTypes.BOOLEAN,
-        allowNull: false
+        type: sequelize_1.DataTypes.ENUM("Confirmada", "Cancelada", "Pendiente"),
+        defaultValue: "Pendiente",
+        allowNull: false,
     },
 }, {
     sequelize: connection_1.default,
     tableName: "Agenda",
     timestamps: false,
 });
-Agenda.belongsTo(user_1.User, { foreignKey: 'correo', as: 'User' });
-user_1.User.hasOne(Agenda, { foreignKey: 'correo', as: 'Agenda' });
-Agenda.belongsTo(paciente_1.Paciente, { foreignKey: 'numero_documento', as: 'paciente' });
-paciente_1.Paciente.hasOne(Agenda, { foreignKey: 'numero_documento', as: 'Agenda' });
+Agenda.belongsTo(user_1.User, { foreignKey: "correo", targetKey: "correo", as: "doctor" });
+user_1.User.hasMany(Agenda, { foreignKey: "correo", sourceKey: "correo", as: "citas" });
+Agenda.belongsTo(paciente_1.Paciente, { foreignKey: "numero_documento", targetKey: "numero_documento", as: "paciente" });
+paciente_1.Paciente.hasMany(Agenda, { foreignKey: "numero_documento", sourceKey: "numero_documento", as: "citas" });

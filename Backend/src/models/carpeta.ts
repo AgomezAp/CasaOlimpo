@@ -4,7 +4,6 @@ import {
 } from 'sequelize';
 
 import sequelize from '../database/connection';
-import { User } from './user';
 import { Paciente } from './paciente';
 
 export class Carpeta extends Model {

@@ -8,34 +8,52 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.obtenerCitas = exports.eliminarCita = exports.actualizarCita = exports.crearCita = void 0;
+exports.obtenerCitasPorDoctor = exports.obtenerCitas = exports.eliminarCita = exports.actualizarCita = exports.crearCita = void 0;
 const agenda_1 = require("../models/agenda");
 const user_1 = require("../models/user");
 const paciente_1 = require("../models/paciente");
+const dayjs_1 = __importDefault(require("dayjs"));
 const crearCita = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { correo, numero_documento, fecha_cita, hora_cita, estado } = req.body;
     try {
-        // Validar si el doctor (User) existe
+        // Formatear y validar fecha primero
+        const fechaFormateada = (0, dayjs_1.default)(fecha_cita, "YYYY-MM-DD");
+        if (!fechaFormateada.isValid()) {
+            return res.status(400).json({
+                message: "Formato de fecha inválido. Use YYYY-MM-DD",
+            });
+        }
+        // Validar formato de hora
+        const horaRegex = /^([01]?[0-9]|2[0-3]):([0-5][0-9])(?::([0-5][0-9]))?$/;
+        if (!horaRegex.test(hora_cita)) {
+            return res.status(400).json({
+                message: "Formato de hora inválido. Use HH:MM o HH:MM:SS",
+            });
+        }
+        // Validar si el doctor existe
         const doctor = yield user_1.User.findOne({ where: { correo } });
         if (!doctor) {
             return res.status(404).json({
                 message: "El doctor con el correo proporcionado no existe.",
             });
         }
-        // Validar si el paciente (Paciente) existe
+        // Validar si el paciente existe
         const paciente = yield paciente_1.Paciente.findOne({ where: { numero_documento } });
         if (!paciente) {
             return res.status(404).json({
                 message: "El paciente con el número de documento proporcionado no existe.",
             });
         }
-        // Validar si ya existe una cita en la misma fecha y hora para el mismo doctor
+        // AQUÍ ESTÁ LA CORRECCIÓN - Usar la fecha formateada para verificar solapamiento
         const citaExistente = yield agenda_1.Agenda.findOne({
             where: {
-                fecha_cita,
+                fecha_cita: fechaFormateada.toDate(), // Usar fecha formateada
                 hora_cita,
-                correo, // Validar que no haya solapamiento para el mismo doctor
+                correo,
             },
         });
         if (citaExistente) {
@@ -43,13 +61,13 @@ const crearCita = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
                 message: "Ya existe una cita programada para el doctor en la misma fecha y hora.",
             });
         }
-        // Crear la nueva cita si no hay solapamiento
+        // Crear la cita con fecha formateada
         const nuevaCita = yield agenda_1.Agenda.create({
             correo,
             numero_documento,
-            fecha_cita,
+            fecha_cita: fechaFormateada.toDate(), // Guardar con formato correcto
             hora_cita,
-            estado,
+            estado: estado || "Pendiente", // Valor por defecto
         });
         return res.status(201).json({
             message: "Cita creada correctamente",
@@ -57,6 +75,7 @@ const crearCita = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         });
     }
     catch (err) {
+        console.error("Error creando cita:", err);
         res.status(500).json({
             message: "Error creando la cita",
             error: err.message,
@@ -126,21 +145,47 @@ const eliminarCita = (req, res) => __awaiter(void 0, void 0, void 0, function* (
 exports.eliminarCita = eliminarCita;
 const obtenerCitas = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
+        // Si estás usando req.params.correo o req.params.numero_documento
+        // asegúrate de que sea string:
+        const { correo, numero_documento } = req.params;
+        // Busca con los tipos correctos
         const citas = yield agenda_1.Agenda.findAll({
+            where: Object.assign(Object.assign({}, (correo && { correo: String(correo) })), (numero_documento && { numero_documento: String(numero_documento) })),
             include: [
-                {
-                    model: user_1.User,
-                    as: 'doctor',
-                    attributes: ['nombre', 'apellido'],
-                },
-                {
-                    model: paciente_1.Paciente,
-                    as: 'paciente',
-                    attributes: ['nombre', 'apellido', 'telefono'],
-                },
-            ],
+                { model: user_1.User, as: "doctor" },
+                { model: paciente_1.Paciente, as: "paciente" }
+            ]
         });
-        return res.status(200).json(citas);
+        return res.status(200).json({
+            message: "Citas obtenidas correctamente",
+            data: citas
+        });
+    }
+    catch (err) {
+        console.error("Error obteniendo las citas:", err);
+        res.status(500).json({
+            message: "Error obteniendo las citas",
+            error: err.message
+        });
+    }
+});
+exports.obtenerCitas = obtenerCitas;
+const obtenerCitasPorDoctor = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { numero_documento } = req.params;
+    try {
+        const citas = yield agenda_1.Agenda.findAll({
+            where: {
+                numero_documento: numero_documento,
+            },
+            include: [
+                { model: user_1.User, as: "doctor" },
+                { model: paciente_1.Paciente, as: "paciente" }
+            ]
+        });
+        return res.status(200).json({
+            message: "Citas obtenidas correctamente",
+            data: citas,
+        });
     }
     catch (err) {
         res.status(500).json({
@@ -149,4 +194,4 @@ const obtenerCitas = (req, res) => __awaiter(void 0, void 0, void 0, function* (
         });
     }
 });
-exports.obtenerCitas = obtenerCitas;
+exports.obtenerCitasPorDoctor = obtenerCitasPorDoctor;

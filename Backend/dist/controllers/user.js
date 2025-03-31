@@ -30,18 +30,18 @@ const registrarUsuario = (req, res) => __awaiter(void 0, void 0, void 0, functio
             message: "La contraseña debe tener al menos 8 caracteres, incluir al menos un número, una letra y un carácter especial.",
         });
     }
-    const userOne = yield user_1.User.findOne({ where: { correo: correo } });
+    const userOne = yield user_1.User.findOne({ where: { correo } });
     if (userOne) {
         return res.status(400).json({
             message: `El usuario con el email: ${correo} ya existe`,
         });
     }
-    const correoEncriptado = yield bcrypt_1.default.hash(correo, 10);
-    const contrasenaEncriptada = yield bcrypt_1.default.hash(contrasena, 10);
+    const saltRounds = 10;
+    const contrasenaHasheada = yield bcrypt_1.default.hash(contrasena, saltRounds);
     try {
         const newUser = yield user_1.User.create({
-            correo: correoEncriptado,
-            contrasena: contrasenaEncriptada,
+            correo,
+            contrasena: contrasenaHasheada,
             nombre,
             rol,
         });
@@ -60,12 +60,15 @@ const registrarUsuario = (req, res) => __awaiter(void 0, void 0, void 0, functio
 exports.registrarUsuario = registrarUsuario;
 const iniciarSesion = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { correo, contrasena } = req.body;
-    const user = yield user_1.User.findOne({ where: { correo } });
+    // Encripta el correo para buscarlo (igual que en el registro)
+    // Busca por el correo encriptado
+    const user = yield user_1.User.findOne({ where: { correo: correo } });
     if (!user) {
         return res.status(400).json({
             message: "Usuario no encontrado",
         });
     }
+    // Verifica la contraseña con bcrypt
     const contrasenaValida = yield bcrypt_1.default.compare(contrasena, user.contrasena);
     if (!contrasenaValida) {
         return res.status(400).json({

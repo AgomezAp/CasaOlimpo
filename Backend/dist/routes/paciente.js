@@ -6,4 +6,5 @@ const router = (0, express_1.Router)();
 router.post("/api/paciente/crear", paciente_1.crearPaciente);
 router.get("/api/paciente/traer_todos", paciente_1.obtenerPacientes);
 router.get("/api/paciente/consultar/:numero_documento", paciente_1.obtenerPacienteId);
+router.patch("/api/paciente/actualizar/:numero_documento", paciente_1.actualizarDatosPaciente);
 exports.default = router;

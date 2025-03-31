@@ -2,6 +2,8 @@ import { User } from "../models/user";
 import bcrypt from "bcrypt";
 import { Request, Response } from "express";
 import jwt from "jsonwebtoken";
+import { decryptData, encryptData } from "./encriptado";
+
 
 export const registrarUsuario = async (
   req: Request,
@@ -24,19 +26,20 @@ export const registrarUsuario = async (
         "La contraseña debe tener al menos 8 caracteres, incluir al menos un número, una letra y un carácter especial.",
     });
   }
-
-  const userOne = await User.findOne({ where: { correo: correo } });
+  const userOne = await User.findOne({ where: { correo } });
+  
   if (userOne) {
     return res.status(400).json({
       message: `El usuario con el email: ${correo} ya existe`,
     });
   }
-  const correoEncriptado = await bcrypt.hash(correo, 10);
-  const contrasenaEncriptada = await bcrypt.hash(contrasena, 10);
+  const saltRounds = 10;
+  const contrasenaHasheada = await bcrypt.hash(contrasena, saltRounds);
+
   try {
     const newUser = await User.create({
-      correo: correoEncriptado,
-      contrasena: contrasenaEncriptada,
+      correo,
+      contrasena: contrasenaHasheada,
       nombre,
       rol,
     });
@@ -54,13 +57,21 @@ export const registrarUsuario = async (
 
 export const iniciarSesion = async (req: Request,res: Response): Promise<any> => {
   const { correo, contrasena } = req.body;
-  const user = await User.findOne({ where: { correo } });
+  
+  // Encripta el correo para buscarlo (igual que en el registro)
+  
+  // Busca por el correo encriptado
+  const user = await User.findOne({ where: { correo: correo } });
+  
   if (!user) {
     return res.status(400).json({
       message: "Usuario no encontrado",
     });
   }
+  
+  // Verifica la contraseña con bcrypt
   const contrasenaValida = await bcrypt.compare(contrasena, user.contrasena);
+  
   if (!contrasenaValida) {
     return res.status(400).json({
       message: "Contraseña incorrecta",

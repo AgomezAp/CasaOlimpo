@@ -32,7 +32,6 @@ export class Paciente extends Model {
     public alergias !: string;
     public antecedentes !: string;
     public antecedentes_familiares !: string;
-    public consentimiento_info !: boolean;
 }
 
 Paciente.init(
@@ -142,10 +141,7 @@ Paciente.init(
             type: DataTypes.STRING,
             allowNull: false
         },
-        consentimiento_info: {
-            type: DataTypes.BOOLEAN,
-            allowNull: true
-        },
+        
     },
         {
             sequelize,

@@ -1,64 +1,62 @@
-import {
-  DataTypes,
-  Model,
-} from 'sequelize';
+import { DataTypes, Model } from "sequelize";
 
-import sequelize from '../database/connection';
-import { User } from './user';
-import { Paciente } from './paciente';
+import sequelize from "../database/connection";
+import { User } from "./user";
+import { Paciente } from "./paciente";
 
 export class Agenda extends Model {
-    public Aid!: number;
-    public correo!: string;
-    public fecha_cita!: Date;
-    public hora_cita!: string;
-    public estado !: boolean;
-    public numero_documento!: string;
+  public Aid!: number;
+  public correo!: string;
+  public fecha_cita!: Date;
+  public hora_cita!: string;
+  public estado!: "Confirmada" | "Cancelada" | "Pendiente";
+  public numero_documento!: string;
 }
 Agenda.init(
-    {
-        Aid: {
-            type: DataTypes.INTEGER,
-            autoIncrement: true,
-            primaryKey: true
-        },
-        correo: {
-            type: DataTypes.STRING,
-            allowNull: false,
-            references: {
-                model: 'User',
-                key: 'correo'
-            },
-        },
-         numero_documento: {
-            type: DataTypes.STRING,
-            allowNull: false,
-            references: {
-                model: 'Paciente',
-                key: 'numero_documento',
-            },
-        },
-    
-        fecha_cita: {
-            type: DataTypes.DATE,
-            allowNull: false
-        },
-        hora_cita: {
-            type: DataTypes.TIME,
-            allowNull: false
-        },
-        estado: {
-            type: DataTypes.BOOLEAN,
-            allowNull: false
-        },
+  {
+    Aid: {
+      type: DataTypes.INTEGER,
+      autoIncrement: true,
+      primaryKey: true,
     },
-    {
-        sequelize,
-        tableName: "Agenda",
-        timestamps: false,
-    }
+    correo: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      references: {
+        model: "User",
+        key: "correo",
+      },
+    },
+    numero_documento: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      references: {
+        model: "Paciente",
+        key: "numero_documento",
+      },
+    },
+
+    fecha_cita: {
+      type: DataTypes.DATE,
+      allowNull: false,
+    },
+    hora_cita: {
+      type: DataTypes.TIME,
+      allowNull: false,
+    },
+    estado: {
+      type: DataTypes.ENUM("Confirmada", "Cancelada", "Pendiente"),
+      defaultValue: "Pendiente",
+      allowNull: false,
+    },
+  },
+  {
+    sequelize,
+    tableName: "Agenda",
+    timestamps: false,
+  }
 );
-Agenda.belongsTo(User, {foreignKey: 'correo',as: 'User'});
-User.hasOne(Agenda, { foreignKey: 'correo', as: 'Agenda' });
-Agenda.belongsTo(Paciente, {foreignKey: 'numero_documento',as: 'paciente'});
-Paciente.hasOne(Agenda, { foreignKey: 'numero_documento', as: 'Agenda' });
+Agenda.belongsTo(User, { foreignKey: "correo", targetKey: "correo", as: "doctor" });
+User.hasMany(Agenda, { foreignKey: "correo", sourceKey: "correo", as: "citas" });
+Agenda.belongsTo(Paciente, { foreignKey: "numero_documento", targetKey: "numero_documento", as: "paciente" });
+Paciente.hasMany(Agenda, { foreignKey: "numero_documento", sourceKey: "numero_documento", as: "citas" });

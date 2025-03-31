@@ -22,6 +22,8 @@ export class Consulta extends Model {
     public numero_documento!: string;
     public fecha!: Date;
     public correo!: string;
+    public consentimiento_info !: Buffer;
+    public consentimiento_check !: boolean;
 }
 
 Consulta.init(
@@ -90,7 +92,15 @@ Consulta.init(
                 model: 'User',
                 key: 'correo'
             },
-        }
+        },
+        consentimiento_info: {
+            type: DataTypes.BLOB('long'),
+            allowNull: true,
+        },
+        consentimiento_check: {
+            type: DataTypes.BOOLEAN,
+            allowNull: true,
+        },
     },
     {
         sequelize,

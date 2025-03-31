@@ -112,10 +112,6 @@ Paciente.init({
         type: sequelize_1.DataTypes.STRING,
         allowNull: false
     },
-    consentimiento_info: {
-        type: sequelize_1.DataTypes.BOOLEAN,
-        allowNull: true
-    },
 }, {
     sequelize: connection_1.default,
     tableName: "Paciente",

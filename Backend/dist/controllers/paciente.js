@@ -83,10 +83,55 @@ const obtenerPacientes = (req, res) => __awaiter(void 0, void 0, void 0, functio
         // Descifrar los datos sensibles de cada paciente
         const pacientesDescifrados = pacientes.map(paciente => {
             const pacienteJSON = paciente.toJSON();
-            pacienteJSON.direccion_domicilio = (0, encriptado_1.decryptData)(pacienteJSON.direccion_domicilio);
-            pacienteJSON.alergias = (0, encriptado_1.decryptData)(pacienteJSON.alergias);
-            pacienteJSON.antecedentes = (0, encriptado_1.decryptData)(pacienteJSON.antecedentes);
-            pacienteJSON.antecedentes_familiares = (0, encriptado_1.decryptData)(pacienteJSON.antecedentes_familiares);
+            // Usar try-catch para cada campo individualmente
+            try {
+                pacienteJSON.direccion_domicilio = (0, encriptado_1.decryptData)(pacienteJSON.direccion_domicilio);
+            }
+            catch (e) {
+                if (e instanceof Error) {
+                    console.error(`Error al desencriptar dirección: ${e.message}`);
+                }
+                else {
+                    console.error("Error al desencriptar dirección: Error desconocido");
+                }
+                pacienteJSON.direccion_domicilio = '';
+            }
+            try {
+                pacienteJSON.alergias = (0, encriptado_1.decryptData)(pacienteJSON.alergias);
+            }
+            catch (e) {
+                if (e instanceof Error) {
+                    console.error(`Error al desencriptar alergias: ${e.message}`);
+                }
+                else {
+                    console.error("Error al desencriptar alergias: Error desconocido");
+                }
+                pacienteJSON.alergias = '';
+            }
+            try {
+                pacienteJSON.antecedentes = (0, encriptado_1.decryptData)(pacienteJSON.antecedentes);
+            }
+            catch (e) {
+                if (e instanceof Error) {
+                    console.error(`Error al desencriptar antecedentes: ${e.message}`);
+                }
+                else {
+                    console.error("Error al desencriptar antecedentes: Error desconocido");
+                }
+                pacienteJSON.antecedentes = '';
+            }
+            try {
+                pacienteJSON.antecedentes_familiares = (0, encriptado_1.decryptData)(pacienteJSON.antecedentes_familiares);
+            }
+            catch (e) {
+                if (e instanceof Error) {
+                    console.error(`Error al desencriptar antecedentes familiares: ${e.message}`);
+                }
+                else {
+                    console.error("Error al desencriptar antecedentes familiares: Error desconocido");
+                }
+                pacienteJSON.antecedentes_familiares = '';
+            }
             return pacienteJSON;
         });
         return res.status(200).json({
@@ -112,8 +157,9 @@ const obtenerPacienteId = (req, res) => __awaiter(void 0, void 0, void 0, functi
                 message: "Paciente no encontrado",
             });
         }
-        // Descifrar los datos sensibles
+        // Aquí está el problema: necesitas convertir primero a objeto plano antes de modificar
         const pacienteJSON = paciente.toJSON();
+        // Desencriptar los datos sensibles
         pacienteJSON.direccion_domicilio = (0, encriptado_1.decryptData)(pacienteJSON.direccion_domicilio);
         pacienteJSON.alergias = (0, encriptado_1.decryptData)(pacienteJSON.alergias);
         pacienteJSON.antecedentes = (0, encriptado_1.decryptData)(pacienteJSON.antecedentes);
@@ -124,7 +170,7 @@ const obtenerPacienteId = (req, res) => __awaiter(void 0, void 0, void 0, functi
         });
     }
     catch (err) {
-        console.error("Error:", err);
+        console.error("Error al obtener paciente:", err);
         res.status(500).json({
             message: "Error obteniendo el paciente",
             error: err.message,
@@ -134,6 +180,44 @@ const obtenerPacienteId = (req, res) => __awaiter(void 0, void 0, void 0, functi
 exports.obtenerPacienteId = obtenerPacienteId;
 const actualizarDatosPaciente = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { numero_documento } = req.params;
-    const { nombre, apellidos, sexo, edad, tipo_documento, ciudad_expedicion, ciudad_domicilio, barrio, direccion_domicilio, telefono, email, celular, ocupacion, estado_civil, eps, tipo_afiliacion, consentimiento_info } = req.body;
+    const datosActualizados = req.body;
+    try {
+        const paciente = yield paciente_1.Paciente.findOne({ where: { numero_documento } });
+        if (!paciente) {
+            return res.status(404).json({ message: "Paciente no encontrado" });
+        }
+        // Preparar objeto de actualización solo con los campos proporcionados
+        const actualizaciones = {};
+        // Procesar solo los campos que vienen en el request
+        if (datosActualizados.direccion_domicilio)
+            actualizaciones.direccion_domicilio = (0, encriptado_1.encryptData)(datosActualizados.direccion_domicilio);
+        // Campos normales (sin encriptar)
+        ['edad', 'tipo_documento', 'ciudad_expedicion', 'ciudad_domicilio',
+            'barrio', 'telefono', 'email', 'celular', 'ocupacion',
+            'estado_civil', 'eps', 'tipo_afiliacion', 'consentimiento_info'
+        ].forEach(campo => {
+            if (campo in datosActualizados) {
+                actualizaciones[campo] = datosActualizados[campo];
+            }
+        });
+        // Campos que requieren encriptación
+        ['alergias', 'antecedentes', 'antecedentes_familiares'].forEach(campo => {
+            if (campo in datosActualizados) {
+                actualizaciones[campo] = (0, encriptado_1.encryptData)(datosActualizados[campo]);
+            }
+        });
+        // Solo actualiza los campos que se proporcionaron
+        yield paciente.update(actualizaciones);
+        return res.status(200).json({
+            message: "Paciente actualizado correctamente",
+        });
+    }
+    catch (err) {
+        console.error("Error:", err);
+        res.status(500).json({
+            message: "Error actualizando el paciente",
+            error: err.message
+        });
+    }
 });
 exports.actualizarDatosPaciente = actualizarDatosPaciente;
