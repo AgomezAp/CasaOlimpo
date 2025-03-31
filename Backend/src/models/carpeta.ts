@@ -4,6 +4,8 @@ import {
 } from 'sequelize';
 
 import sequelize from '../database/connection';
+import { User } from './user';
+import { Paciente } from './paciente';
 
 export class Carpeta extends Model {
   
@@ -39,7 +41,9 @@ Carpeta.init(
     },
     {
         sequelize,
-        tableName: "Consulta",
+        tableName: "Carpeta",
         timestamps: false,
     }
 )
+Carpeta.belongsTo(Paciente, {foreignKey: 'numero_documento',as: 'paciente'});
+Paciente.hasOne(Carpeta, { foreignKey: 'numero_documento', as: 'Carpeta' });

@@ -1,23 +1,19 @@
-import {
-  DataTypes,
-  Model,
-} from 'sequelize';
-
+import { DataTypes, Model } from "sequelize";
 import sequelize from '../database/connection';
-import { User } from './user';
-import { Paciente } from './paciente';
+import { User } from "./user";
 
-export class Agenda extends Model {
-    public Aid!: number;
-    public correo!: string;
+export class AgendaNoRegistrados extends Model {
+    public ANRid!: number;
     public fecha_cita!: Date;
     public hora_cita!: string;
+    public telefono!: string;
     public estado !: boolean;
-    public numero_documento!: string;
 }
-Agenda.init(
+
+AgendaNoRegistrados.init(
+
     {
-        Aid: {
+        ANRid: {
             type: DataTypes.INTEGER,
             autoIncrement: true,
             primaryKey: true
@@ -30,14 +26,6 @@ Agenda.init(
                 key: 'correo'
             },
         },
-         numero_documento: {
-            type: DataTypes.STRING,
-            allowNull: false,
-            references: {
-                model: 'Paciente',
-                key: 'numero_documento',
-            },
-        },
     
         fecha_cita: {
             type: DataTypes.DATE,
@@ -47,6 +35,10 @@ Agenda.init(
             type: DataTypes.TIME,
             allowNull: false
         },
+        telefono:{
+            type: DataTypes.STRING,
+            allowNull:false
+        },
         estado: {
             type: DataTypes.BOOLEAN,
             allowNull: false
@@ -54,11 +46,10 @@ Agenda.init(
     },
     {
         sequelize,
-        tableName: "Agenda",
+        tableName: "AgendaNoRegistrados",
         timestamps: false,
     }
 );
-Agenda.belongsTo(User, {foreignKey: 'correo',as: 'User'});
-User.hasOne(Agenda, { foreignKey: 'correo', as: 'Agenda' });
-Agenda.belongsTo(Paciente, {foreignKey: 'numero_documento',as: 'paciente'});
-Paciente.hasOne(Agenda, { foreignKey: 'numero_documento', as: 'Agenda' });
+AgendaNoRegistrados.belongsTo(User, {foreignKey: 'correo',as: 'User'});
+User.hasOne(AgendaNoRegistrados, { foreignKey: 'correo', as: 'Agenda' });
+

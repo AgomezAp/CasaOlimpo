@@ -4,6 +4,7 @@ import {
 } from 'sequelize';
 
 import sequelize from '../database/connection';
+import { Receta } from './receta';
 
 export class Paciente extends Model {
     public Pid !: number;
@@ -150,5 +151,6 @@ Paciente.init(
             timestamps: false,
         }
 
-)
+);
+
 

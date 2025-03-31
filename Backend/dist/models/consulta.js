@@ -6,6 +6,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Consulta = void 0;
 const sequelize_1 = require("sequelize");
 const connection_1 = __importDefault(require("../database/connection"));
+const user_1 = require("./user");
+const paciente_1 = require("./paciente");
 class Consulta extends sequelize_1.Model {
 }
 exports.Consulta = Consulta;
@@ -15,7 +17,7 @@ Consulta.init({
         autoIncrement: true,
         primaryKey: true
     },
-    Motivo: {
+    motivo: {
         type: sequelize_1.DataTypes.STRING,
         allowNull: false
     },
@@ -67,12 +69,12 @@ Consulta.init({
         type: sequelize_1.DataTypes.DATE,
         allowNull: false
     },
-    Uid: {
-        type: sequelize_1.DataTypes.INTEGER,
+    correo: {
+        type: sequelize_1.DataTypes.STRING,
         allowNull: false,
         references: {
             model: 'User',
-            key: 'numero_documento'
+            key: 'correo'
         },
     }
 }, {
@@ -80,3 +82,7 @@ Consulta.init({
     tableName: "Consulta",
     timestamps: false,
 });
+Consulta.belongsTo(user_1.User, { foreignKey: 'correo', as: 'User' });
+user_1.User.hasMany(Consulta, { foreignKey: 'correo', as: 'Consulta' });
+Consulta.belongsTo(paciente_1.Paciente, { foreignKey: 'numero_documento', as: 'paciente' });
+paciente_1.Paciente.hasMany(Consulta, { foreignKey: 'numero_documento', as: 'Consulta' });

@@ -4,12 +4,14 @@ import {
 } from 'sequelize';
 
 import sequelize from '../database/connection';
+import { User } from './user';
+import { Paciente } from './paciente';
 
 export class Receta extends Model{
     public RecetaId!: number;
     public Uid!: number;
     public anotaciones !: string;
-
+    public numero_documento !: string;
 }
 Receta.init(
     {
@@ -29,10 +31,20 @@ Receta.init(
         anotaciones: {
             type: DataTypes.STRING,
             allowNull: false
-        }
+        },
+        numero_documento: {
+            type: DataTypes.STRING,
+            allowNull: false,
+            references: {
+                model: 'Paciente',
+                key: 'numero_documento'
+            },
+        },
+    
     },
     {
         sequelize,
         tableName: "Receta",
+        timestamps: false,
     }
 )

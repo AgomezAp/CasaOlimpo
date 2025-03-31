@@ -25,6 +25,15 @@ const paciente_1 = __importDefault(require("../routes/paciente"));
 const receta_1 = __importDefault(require("../routes/receta"));
 const redfamiliar_1 = __importDefault(require("../routes/redfamiliar"));
 const user_1 = __importDefault(require("../routes/user"));
+const agenda_2 = require("./agenda");
+const carpeta_2 = require("./carpeta");
+const consulta_2 = require("./consulta");
+const descuento_2 = require("./descuento");
+const facturacion_2 = require("./facturacion");
+const receta_2 = require("./receta");
+const paciente_2 = require("./paciente");
+const redfamiliar_2 = require("./redfamiliar");
+const user_2 = require("./user");
 dotenv_1.default.config();
 class Server {
     constructor() {
@@ -64,22 +73,22 @@ class Server {
             try {
                 /* {force: true}{alter: true} */
                 yield connection_1.default.authenticate();
-                /* await Agenda.sync({alter: true});
-                await Role.sync();
-                await Area.sync({alter: true});
-                await User.sync();
-                await Product.sync();
-                await Permiso.sync({alter: true});
-                await Registro.sync({force: true});
-                await Sumatoria.sync({force: true});
-                await Novedad.sync({alter: true});
-                await NovedadHistorico.sync({alter: true});
-    
-     */
+                yield user_2.User.sync({ force: true });
+                yield paciente_2.Paciente.sync({ force: true });
+                yield consulta_2.Consulta.sync({ force: true });
+                yield agenda_2.Agenda.sync({ force: true });
+                yield redfamiliar_2.RedFamiliar.sync({ force: true });
+                yield carpeta_2.Carpeta.sync({ force: true });
+                yield facturacion_2.Factura.sync({ force: true });
+                yield descuento_2.Descuento.sync({ force: true });
+                yield receta_2.Receta.sync({ force: true });
+                /*
+     await Receta.sync({force: true});
+                */
                 console.log('Conexión establecida correctamente');
             }
             catch (error) {
-                console.log("Error de conexion");
+                console.log("Error de conexion", error);
             }
         });
     }

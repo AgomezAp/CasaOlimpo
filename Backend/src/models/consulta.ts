@@ -4,10 +4,12 @@ import {
 } from 'sequelize';
 
 import sequelize from '../database/connection';
+import { User } from './user';
+import { Paciente } from './paciente';
 
 export class Consulta extends Model {
     public Cid!: number;
-    public Motivo!: string;
+    public motivo!: string;
     public enfermedad_actual!: string;
     public objetivos_terapia!: string;
     public historia_problema!: string;
@@ -19,7 +21,7 @@ export class Consulta extends Model {
     public recomendaciones!: string;
     public numero_documento!: string;
     public fecha!: Date;
-    public Uid!: number;
+    public correo!: string;
 }
 
 Consulta.init(
@@ -29,7 +31,7 @@ Consulta.init(
             autoIncrement: true,
             primaryKey: true
         },
-        Motivo: {
+        motivo: {
             type: DataTypes.STRING,
             allowNull: false
         },
@@ -81,12 +83,12 @@ Consulta.init(
             type: DataTypes.DATE,
             allowNull: false
         },
-        Uid: {
-            type: DataTypes.INTEGER,
+        correo: {
+            type: DataTypes.STRING,
             allowNull: false,
             references: {
                 model: 'User',
-                key: 'numero_documento'
+                key: 'correo'
             },
         }
     },
@@ -95,4 +97,9 @@ Consulta.init(
         tableName: "Consulta",
         timestamps: false,
     }
-)
+);
+
+Consulta.belongsTo(User, {foreignKey: 'correo',as: 'User'});
+User.hasMany(Consulta, { foreignKey: 'correo', as: 'Consulta' });
+Consulta.belongsTo(Paciente, {foreignKey: 'numero_documento',as: 'paciente'});
+Paciente.hasMany(Consulta, { foreignKey: 'numero_documento', as: 'Consulta' });

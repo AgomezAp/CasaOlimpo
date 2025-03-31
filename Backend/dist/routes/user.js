@@ -1,5 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
+const user_1 = require("../controllers/user");
 const router = (0, express_1.Router)();
+router.post('/api/usuario/registrar', user_1.registrarUsuario);
+router.post('/api/usuario/iniciar-sesion', user_1.iniciarSesion);
+router.patch('/api/usuario/reestablecer-contrasena', user_1.reestablecerContraseña);
+router.delete('/api/usuario/eliminar/:Uid', user_1.eliminarUsuarioId);
 exports.default = router;

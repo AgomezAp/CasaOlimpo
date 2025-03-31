@@ -26,8 +26,17 @@ Receta.init({
     anotaciones: {
         type: sequelize_1.DataTypes.STRING,
         allowNull: false
-    }
+    },
+    numero_documento: {
+        type: sequelize_1.DataTypes.STRING,
+        allowNull: false,
+        references: {
+            model: 'Paciente',
+            key: 'numero_documento'
+        },
+    },
 }, {
     sequelize: connection_1.default,
     tableName: "Receta",
+    timestamps: false,
 });

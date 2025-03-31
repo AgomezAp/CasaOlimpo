@@ -18,11 +18,13 @@ User.init(
      Uid:{
             type: DataTypes.INTEGER,
             autoIncrement: true,
+            primaryKey: true,
      },
      correo:{
             type: DataTypes.STRING,
             allowNull: false,
-            primaryKey: true
+            unique: true,
+        
      },
         contrasena:{
                 type: DataTypes.STRING,

@@ -12,6 +12,15 @@ import RPaciente from '../routes/paciente';
 import RReceta from '../routes/receta';
 import RRedFamiliar from '../routes/redfamiliar';
 import RUser from '../routes/user';
+import { Agenda } from './agenda';
+import { Carpeta } from './carpeta';
+import { Consulta } from './consulta';
+import { Descuento } from './descuento';
+import { Factura } from './facturacion';
+import { Receta } from './receta';
+import { Paciente } from './paciente';
+import { RedFamiliar } from './redfamiliar';
+import { User } from './user';
 
 dotenv.config();
 
@@ -57,23 +66,21 @@ class Server{
         try{
             /* {force: true}{alter: true} */
             await sequelize.authenticate();
-            
-
-            /* await Agenda.sync({alter: true});
-            await Role.sync();
-            await Area.sync({alter: true});
-            await User.sync();
-            await Product.sync();
-            await Permiso.sync({alter: true});
-            await Registro.sync({force: true});
-            await Sumatoria.sync({force: true});
-            await Novedad.sync({alter: true});
-            await NovedadHistorico.sync({alter: true});
-
- */
+            await User.sync({force: true});
+            await Paciente.sync({force: true});
+            await Consulta.sync({force: true});
+            await Agenda.sync({force: true});
+            await RedFamiliar.sync({force: true});
+            await Carpeta.sync({force: true});
+            await Factura.sync({force: true});
+            await Descuento.sync({force: true});
+            await Receta.sync({force: true}); 
+            /*  
+ await Receta.sync({force: true}); 
+            */
             console.log('Conexión establecida correctamente');
         }catch (error){
-            console.log("Error de conexion"); 
+            console.log("Error de conexion",error); 
 
         }
     }

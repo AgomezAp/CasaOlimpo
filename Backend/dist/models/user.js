@@ -13,11 +13,12 @@ User.init({
     Uid: {
         type: sequelize_1.DataTypes.INTEGER,
         autoIncrement: true,
+        primaryKey: true,
     },
     correo: {
         type: sequelize_1.DataTypes.STRING,
         allowNull: false,
-        primaryKey: true
+        unique: true,
     },
     contrasena: {
         type: sequelize_1.DataTypes.STRING,
