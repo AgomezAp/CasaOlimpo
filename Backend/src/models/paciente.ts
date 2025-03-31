@@ -27,7 +27,7 @@ export class Paciente extends Model {
     public estado_civil !: 'Soltero' | 'Casado' | 'Divorciado' | 'Viudo';
     public eps !: string;
     public tipo_afiliacion !: 'Contributivo' | 'Subsidiado' | 'Vinculado' | 'Particular';
-    public grupo_sanguineo !: 'A+' | 'A-' | 'B+' | 'B-' | 'AB+' | 'AB-' | 'O+' | 'O-';
+    public grupo_sanguineo !: 'A' | 'A' | 'B' | 'B' | 'AB' | 'AB' | 'O' | 'O';
     public rh !: '+' | '-';
     public alergias !: string;
     public antecedentes !: string;
@@ -40,6 +40,7 @@ Paciente.init(
         Pid: {
             type: DataTypes.INTEGER,
             autoIncrement: true,
+            allowNull: false 
         },
         nombre: {
             type: DataTypes.STRING,
@@ -51,7 +52,8 @@ Paciente.init(
         },
         fecha_nacimiento: {
             type: DataTypes.DATE,
-            allowNull: false
+            allowNull: true,
+           
         },
         sexo: {
             type: DataTypes.ENUM('Masculino', 'Femenino', 'Otro'),
@@ -142,7 +144,7 @@ Paciente.init(
         },
         consentimiento_info: {
             type: DataTypes.BOOLEAN,
-            allowNull: false
+            allowNull: true
         },
     },
         {

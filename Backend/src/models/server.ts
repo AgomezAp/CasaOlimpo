@@ -21,6 +21,7 @@ import { Receta } from './receta';
 import { Paciente } from './paciente';
 import { RedFamiliar } from './redfamiliar';
 import { User } from './user';
+import { rateLimiter } from '../controllers/rateLimiter';
 
 dotenv.config();
 
@@ -56,6 +57,7 @@ class Server{
     }
     middlewares(){
         this.app.use(express.json())
+        this.app.use(rateLimiter);
         this.app.use(cors({
             origin: '*', // Permite todas las solicitudes de origen cruzado
             methods: ['GET', 'POST', 'PUT', 'DELETE','PATCH'], // Métodos permitidos
@@ -66,15 +68,15 @@ class Server{
         try{
             /* {force: true}{alter: true} */
             await sequelize.authenticate();
-            await User.sync({force: true});
-            await Paciente.sync({force: true});
-            await Consulta.sync({force: true});
-            await Agenda.sync({force: true});
-            await RedFamiliar.sync({force: true});
-            await Carpeta.sync({force: true});
-            await Factura.sync({force: true});
-            await Descuento.sync({force: true});
-            await Receta.sync({force: true}); 
+            await User.sync();
+            await Paciente.sync();
+            await Consulta.sync();
+            await Agenda.sync();
+            await RedFamiliar.sync();
+            await Carpeta.sync();
+            await Factura.sync();
+            await Descuento.sync();
+            await Receta.sync(); 
             /*  
  await Receta.sync({force: true}); 
             */

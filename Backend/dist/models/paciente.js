@@ -13,6 +13,7 @@ Paciente.init({
     Pid: {
         type: sequelize_1.DataTypes.INTEGER,
         autoIncrement: true,
+        allowNull: false
     },
     nombre: {
         type: sequelize_1.DataTypes.STRING,
@@ -24,7 +25,7 @@ Paciente.init({
     },
     fecha_nacimiento: {
         type: sequelize_1.DataTypes.DATE,
-        allowNull: false
+        allowNull: true,
     },
     sexo: {
         type: sequelize_1.DataTypes.ENUM('Masculino', 'Femenino', 'Otro'),
@@ -113,7 +114,7 @@ Paciente.init({
     },
     consentimiento_info: {
         type: sequelize_1.DataTypes.BOOLEAN,
-        allowNull: false
+        allowNull: true
     },
 }, {
     sequelize: connection_1.default,

@@ -34,6 +34,7 @@ const receta_2 = require("./receta");
 const paciente_2 = require("./paciente");
 const redfamiliar_2 = require("./redfamiliar");
 const user_2 = require("./user");
+const rateLimiter_1 = require("../controllers/rateLimiter");
 dotenv_1.default.config();
 class Server {
     constructor() {
@@ -62,6 +63,7 @@ class Server {
     }
     middlewares() {
         this.app.use(express_1.default.json());
+        this.app.use(rateLimiter_1.rateLimiter);
         this.app.use((0, cors_1.default)({
             origin: '*', // Permite todas las solicitudes de origen cruzado
             methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'], // Métodos permitidos
@@ -73,15 +75,15 @@ class Server {
             try {
                 /* {force: true}{alter: true} */
                 yield connection_1.default.authenticate();
-                yield user_2.User.sync({ force: true });
-                yield paciente_2.Paciente.sync({ force: true });
-                yield consulta_2.Consulta.sync({ force: true });
-                yield agenda_2.Agenda.sync({ force: true });
-                yield redfamiliar_2.RedFamiliar.sync({ force: true });
-                yield carpeta_2.Carpeta.sync({ force: true });
-                yield facturacion_2.Factura.sync({ force: true });
-                yield descuento_2.Descuento.sync({ force: true });
-                yield receta_2.Receta.sync({ force: true });
+                yield user_2.User.sync();
+                yield paciente_2.Paciente.sync();
+                yield consulta_2.Consulta.sync();
+                yield agenda_2.Agenda.sync();
+                yield redfamiliar_2.RedFamiliar.sync();
+                yield carpeta_2.Carpeta.sync();
+                yield facturacion_2.Factura.sync();
+                yield descuento_2.Descuento.sync();
+                yield receta_2.Receta.sync();
                 /*
      await Receta.sync({force: true});
                 */
