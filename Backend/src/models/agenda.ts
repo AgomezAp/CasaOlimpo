@@ -11,6 +11,7 @@ export class Agenda extends Model {
   public hora_cita!: string;
   public estado!: "Confirmada" | "Cancelada" | "Pendiente";
   public numero_documento!: string;
+  public descripcion!: string;
 }
 Agenda.init(
   {
@@ -48,6 +49,10 @@ Agenda.init(
       type: DataTypes.ENUM("Confirmada", "Cancelada", "Pendiente"),
       defaultValue: "Pendiente",
       allowNull: false,
+    },
+    descripcion: {
+      type: DataTypes.STRING,
+      allowNull: true,
     },
   },
   {

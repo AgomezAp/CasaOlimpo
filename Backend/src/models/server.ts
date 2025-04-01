@@ -71,7 +71,7 @@ class Server{
             await User.sync();
             await Paciente.sync();
             await Consulta.sync();
-            await Agenda.sync();
+            await Agenda.sync({force: true});
             await RedFamiliar.sync();
             await Carpeta.sync();
             await Factura.sync();

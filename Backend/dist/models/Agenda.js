@@ -46,6 +46,10 @@ Agenda.init({
         defaultValue: "Pendiente",
         allowNull: false,
     },
+    descripcion: {
+        type: sequelize_1.DataTypes.STRING,
+        allowNull: true,
+    },
 }, {
     sequelize: connection_1.default,
     tableName: "Agenda",

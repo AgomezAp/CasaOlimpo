@@ -34,24 +34,23 @@ const crearCita = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
                 message: "Formato de hora inválido. Use HH:MM o HH:MM:SS",
             });
         }
-        // Validar si el doctor existe
+        // Validaciones de doctor y paciente...
         const doctor = yield user_1.User.findOne({ where: { correo } });
         if (!doctor) {
             return res.status(404).json({
                 message: "El doctor con el correo proporcionado no existe.",
             });
         }
-        // Validar si el paciente existe
         const paciente = yield paciente_1.Paciente.findOne({ where: { numero_documento } });
         if (!paciente) {
             return res.status(404).json({
                 message: "El paciente con el número de documento proporcionado no existe.",
             });
         }
-        // AQUÍ ESTÁ LA CORRECCIÓN - Usar la fecha formateada para verificar solapamiento
+        // Verificar cita exacta en la misma hora
         const citaExistente = yield agenda_1.Agenda.findOne({
             where: {
-                fecha_cita: fechaFormateada.toDate(), // Usar fecha formateada
+                fecha_cita: fechaFormateada.toDate(),
                 hora_cita,
                 correo,
             },
@@ -61,13 +60,38 @@ const crearCita = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
                 message: "Ya existe una cita programada para el doctor en la misma fecha y hora.",
             });
         }
-        // Crear la cita con fecha formateada
+        // NUEVA VALIDACIÓN: Verificar separación de 30 minutos entre citas
+        // 1. Obtener todas las citas del médico para ese día
+        const citasDelDia = yield agenda_1.Agenda.findAll({
+            where: {
+                correo,
+                fecha_cita: fechaFormateada.toDate(),
+            },
+        });
+        // 2. Convertir la hora de la nueva cita a minutos para comparación
+        const [horaStr, minutosStr] = hora_cita.split(':');
+        const nuevaCitaMinutos = parseInt(horaStr) * 60 + parseInt(minutosStr);
+        // 3. Verificar si hay alguna cita demasiado cercana (menos de 30 minutos)
+        const citaDemasiadoCercana = citasDelDia.some(cita => {
+            const [horaExistente, minutosExistente] = cita.hora_cita.split(':');
+            const citaExistenteMinutos = parseInt(horaExistente) * 60 + parseInt(minutosExistente);
+            // Calcular la diferencia absoluta en minutos
+            const diferencia = Math.abs(nuevaCitaMinutos - citaExistenteMinutos);
+            // Si la diferencia es menor a 30 minutos, la cita está demasiado cercana
+            return diferencia < 30;
+        });
+        if (citaDemasiadoCercana) {
+            return res.status(400).json({
+                message: "No se puede programar la cita. Debe haber al menos 30 minutos entre citas para el mismo doctor.",
+            });
+        }
+        // Crear la cita solo si pasa todas las validaciones
         const nuevaCita = yield agenda_1.Agenda.create({
             correo,
             numero_documento,
-            fecha_cita: fechaFormateada.toDate(), // Guardar con formato correcto
+            fecha_cita: fechaFormateada.toDate(),
             hora_cita,
-            estado: estado || "Pendiente", // Valor por defecto
+            estado: estado || "Pendiente",
         });
         return res.status(201).json({
             message: "Cita creada correctamente",

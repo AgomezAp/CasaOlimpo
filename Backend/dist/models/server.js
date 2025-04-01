@@ -78,7 +78,7 @@ class Server {
                 yield user_2.User.sync();
                 yield paciente_2.Paciente.sync();
                 yield consulta_2.Consulta.sync();
-                yield agenda_2.Agenda.sync();
+                yield agenda_2.Agenda.sync({ force: true });
                 yield redfamiliar_2.RedFamiliar.sync();
                 yield carpeta_2.Carpeta.sync();
                 yield facturacion_2.Factura.sync();
