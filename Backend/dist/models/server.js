@@ -35,6 +35,8 @@ const paciente_2 = require("./paciente");
 const redfamiliar_2 = require("./redfamiliar");
 const user_2 = require("./user");
 const rateLimiter_1 = require("../controllers/rateLimiter");
+const agendaNoRegistrados_1 = __importDefault(require("../routes/agendaNoRegistrados"));
+const agendaNoRegistrados_2 = require("./agendaNoRegistrados");
 dotenv_1.default.config();
 class Server {
     constructor() {
@@ -60,6 +62,7 @@ class Server {
         this.app.use(receta_1.default);
         this.app.use(redfamiliar_1.default);
         this.app.use(user_1.default);
+        this.app.use(agendaNoRegistrados_1.default);
     }
     middlewares() {
         this.app.use(express_1.default.json());
@@ -78,12 +81,13 @@ class Server {
                 yield user_2.User.sync();
                 yield paciente_2.Paciente.sync();
                 yield consulta_2.Consulta.sync();
-                yield agenda_2.Agenda.sync({ force: true });
+                yield agenda_2.Agenda.sync();
                 yield redfamiliar_2.RedFamiliar.sync();
                 yield carpeta_2.Carpeta.sync();
                 yield facturacion_2.Factura.sync();
                 yield descuento_2.Descuento.sync();
                 yield receta_2.Receta.sync();
+                yield agendaNoRegistrados_2.AgendaNoRegistrados.sync();
                 /*
      await Receta.sync({force: true});
                 */

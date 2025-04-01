@@ -1,0 +1,10 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const agendaNoRegistrados_1 = require("../controllers/agendaNoRegistrados");
+const router = (0, express_1.Router)();
+router.get("/api/agendaNoRegistrado/obtener_citas", agendaNoRegistrados_1.obtenerCitasNoRegistrados);
+router.post("/api/agendaNoRegistrado/crear", agendaNoRegistrados_1.crearCitaNoRegistrado);
+router.patch("/api/agendaNoRegistrado/actualizar/:ANRid", agendaNoRegistrados_1.actualizarCitaNoRegistrado);
+router.delete("/api/agendaNoRegistrado/eliminar/:ANRid", agendaNoRegistrados_1.eliminarCitaNoRegistrado);
+exports.default = router;

@@ -7,7 +7,9 @@ export class AgendaNoRegistrados extends Model {
     public fecha_cita!: Date;
     public hora_cita!: string;
     public telefono!: string;
-    public estado !: boolean;
+    public estado!: "Confirmada" | "Cancelada" | "Pendiente";
+    public correo!: string;
+
 }
 
 AgendaNoRegistrados.init(
@@ -40,9 +42,10 @@ AgendaNoRegistrados.init(
             allowNull:false
         },
         estado: {
-            type: DataTypes.BOOLEAN,
-            allowNull: false
-        },
+            type: DataTypes.ENUM("Confirmada", "Cancelada", "Pendiente"),
+            defaultValue: "Pendiente",
+            allowNull: false,
+          },
     },
     {
         sequelize,
@@ -50,6 +53,6 @@ AgendaNoRegistrados.init(
         timestamps: false,
     }
 );
-AgendaNoRegistrados.belongsTo(User, {foreignKey: 'correo',as: 'User'});
+AgendaNoRegistrados.belongsTo(User, {foreignKey: "correo",targetKey: "correo"});
 User.hasOne(AgendaNoRegistrados, { foreignKey: 'correo', as: 'Agenda' });
 

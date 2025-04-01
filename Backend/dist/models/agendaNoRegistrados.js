@@ -37,13 +37,14 @@ AgendaNoRegistrados.init({
         allowNull: false
     },
     estado: {
-        type: sequelize_1.DataTypes.BOOLEAN,
-        allowNull: false
+        type: sequelize_1.DataTypes.ENUM("Confirmada", "Cancelada", "Pendiente"),
+        defaultValue: "Pendiente",
+        allowNull: false,
     },
 }, {
     sequelize: connection_1.default,
     tableName: "AgendaNoRegistrados",
     timestamps: false,
 });
-AgendaNoRegistrados.belongsTo(user_1.User, { foreignKey: 'correo', as: 'User' });
+AgendaNoRegistrados.belongsTo(user_1.User, { foreignKey: "correo", targetKey: "correo" });
 user_1.User.hasOne(AgendaNoRegistrados, { foreignKey: 'correo', as: 'Agenda' });

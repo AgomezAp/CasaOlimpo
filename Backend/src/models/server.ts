@@ -22,7 +22,8 @@ import { Paciente } from './paciente';
 import { RedFamiliar } from './redfamiliar';
 import { User } from './user';
 import { rateLimiter } from '../controllers/rateLimiter';
-
+import RAgendaNoRegistrados from '../routes/agendaNoRegistrados';
+import { AgendaNoRegistrados } from './agendaNoRegistrados';
 dotenv.config();
 
 
@@ -54,6 +55,7 @@ class Server{
         this.app.use(RReceta);
         this.app.use(RRedFamiliar);
         this.app.use(RUser)
+        this.app.use(RAgendaNoRegistrados);
     }
     middlewares(){
         this.app.use(express.json())
@@ -71,12 +73,13 @@ class Server{
             await User.sync();
             await Paciente.sync();
             await Consulta.sync();
-            await Agenda.sync({force: true});
+            await Agenda.sync();
             await RedFamiliar.sync();
             await Carpeta.sync();
             await Factura.sync();
             await Descuento.sync();
             await Receta.sync(); 
+            await AgendaNoRegistrados.sync();
             /*  
  await Receta.sync({force: true}); 
             */
