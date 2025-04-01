@@ -7,4 +7,7 @@ router.post("/api/paciente/crear", paciente_1.crearPaciente);
 router.get("/api/paciente/traer_todos", paciente_1.obtenerPacientes);
 router.get("/api/paciente/consultar/:numero_documento", paciente_1.obtenerPacienteId);
 router.patch("/api/paciente/actualizar/:numero_documento", paciente_1.actualizarDatosPaciente);
+router.post("/api/paciente/:numero_documento/foto", [paciente_1.uploadPacienteFoto.single("foto")], paciente_1.actualizarFotoPaciente);
+router.delete('/api/paciente/:numero_documento/foto', paciente_1.eliminarFotoPaciente);
+router.get('/api/paciente/:numero_documento/foto', paciente_1.obtenerFotoPaciente);
 exports.default = router;

@@ -32,6 +32,7 @@ export class Paciente extends Model {
     public alergias !: string;
     public antecedentes !: string;
     public antecedentes_familiares !: string;
+    public foto_path!: string;
 }
 
 Paciente.init(
@@ -141,7 +142,10 @@ Paciente.init(
             type: DataTypes.STRING,
             allowNull: false
         },
-        
+        foto_path: {
+            type: DataTypes.STRING(500),
+            allowNull: true
+        },
     },
         {
             sequelize,

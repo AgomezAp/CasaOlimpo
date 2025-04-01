@@ -24,13 +24,19 @@ Carpeta.init({
             key: 'numero_documento'
         },
     },
-    imagenes: {
-        type: sequelize_1.DataTypes.TEXT('long'),
-        allowNull: false
+    imagen_metadata: {
+        type: sequelize_1.DataTypes.TEXT, // Usamos TEXT en lugar de BLOB
+        allowNull: true,
+        defaultValue: '[]'
+    },
+    descripcion: {
+        type: sequelize_1.DataTypes.STRING,
+        allowNull: true
     },
     fecha: {
         type: sequelize_1.DataTypes.DATE,
-        allowNull: false
+        allowNull: false,
+        defaultValue: sequelize_1.DataTypes.NOW
     }
 }, {
     sequelize: connection_1.default,

@@ -3,7 +3,189 @@ import { Request, Response } from "express";
 import dotenv from 'dotenv';
 import dayjs from "dayjs";
 import { decryptData, encryptData } from "./encriptado";
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
+import { v4 as uuidv4 } from 'uuid';
+import sharp from 'sharp';
+import { NextFunction } from 'express';
+
 dotenv.config();
+
+const pacientesStorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+      const dir = path.join(__dirname, '../../uploads/pacientes/fotos');
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+      cb(null, dir);
+    },
+    filename: (req, file, cb) => {
+      const ext = path.extname(file.originalname);
+      // Usar número de documento como parte del nombre para fácil identificación
+      const documento = req.params.numero_documento || "temp";
+      const uniqueFilename = `paciente_${documento}_${Date.now()}${ext}`;
+      cb(null, uniqueFilename);
+    }
+  });
+  
+  // Filtro para solo permitir imágenes
+  const imageFilter = (req: any, file: any, cb: any) => {
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Formato de archivo no válido. Solo se permiten imágenes JPEG, JPG y PNG.'), false);
+    }
+  };
+  
+  export const uploadPacienteFoto = multer({ 
+    storage: pacientesStorage, 
+    fileFilter: imageFilter,
+    limits: { fileSize: 15 * 1024 * 1024 } // Aumentar a 15MB para fotos dermatológicas originales
+  });
+
+  /**
+   * Subir o actualizar foto de perfil del paciente
+   */
+  export const actualizarFotoPaciente = async (req: Request, res: Response) : Promise<any> =>  {
+    try {
+      const { numero_documento } = req.params;
+      
+      // Verificar que el paciente existe
+      const paciente = await Paciente.findByPk(numero_documento);
+      if (!paciente) {
+        if (req.file) fs.unlinkSync(req.file.path);
+        return res.status(404).json({ message: 'Paciente no encontrado' });
+      }
+      
+      // Verificar que se ha subido un archivo
+      if (!req.file) {
+        return res.status(400).json({ message: 'No se ha subido ningún archivo' });
+      }
+      
+      // Si ya tenía una foto, eliminarla
+      if (paciente.foto_path) {
+        const rutaAnterior = path.join(__dirname, `../../${paciente.foto_path.replace(/^\//, '')}`);
+        if (fs.existsSync(rutaAnterior)) {
+          fs.unlinkSync(rutaAnterior);
+        }
+      }
+      
+      // Guardar la ruta de la nueva imagen
+      const rutaRelativa = `/uploads/pacientes/fotos/${req.file.filename}`;
+      
+      await paciente.update({
+        foto_path: rutaRelativa
+      });
+      
+      return res.status(200).json({
+        message: 'Foto del paciente actualizada correctamente',
+        data: {
+          foto_path: rutaRelativa
+        }
+      });
+    } catch (error: any) {
+      console.error('Error actualizando foto del paciente:', error);
+      if (req.file) {
+        try { fs.unlinkSync(req.file.path); } catch (e) { /* No hacer nada */ }
+      }
+      return res.status(500).json({
+        message: 'Error actualizando la foto del paciente',
+        error: error.message
+      });
+    }
+  };
+  
+  /**
+   * Eliminar foto del paciente
+   */
+  export const eliminarFotoPaciente = async (req: Request, res: Response) : Promise<any> => {
+    try {
+      const { numero_documento } = req.params;
+      
+      // Verificar que el paciente existe
+      const paciente = await Paciente.findByPk(numero_documento);
+      if (!paciente) {
+        return res.status(404).json({ message: 'Paciente no encontrado' });
+      }
+      
+      // Verificar que tiene una foto
+      if (!paciente.foto_path) {
+        return res.status(400).json({ message: 'El paciente no tiene foto registrada' });
+      }
+      
+      // Eliminar archivo físico
+      const rutaImagen = path.join(__dirname, `../../${paciente.foto_path.replace(/^\//, '')}`);
+      if (fs.existsSync(rutaImagen)) {
+        fs.unlinkSync(rutaImagen);
+      }
+      
+      // Actualizar paciente
+      await paciente.update({
+        foto_path: null
+      });
+      
+      return res.status(200).json({
+        message: 'Foto del paciente eliminada correctamente'
+      });
+    } catch (error: any) {
+      console.error('Error eliminando foto del paciente:', error);
+      return res.status(500).json({
+        message: 'Error eliminando la foto del paciente',
+        error: error.message
+      });
+    }
+  };
+  
+  /**
+   * Obtener la foto del paciente
+   * Nota: Esta función es opcional ya que puedes acceder directamente
+   * a la imagen a través de la URL pública
+   */
+  export const obtenerFotoPaciente = async (req: Request, res: Response): Promise<any> =>  {
+    try {
+      const { numero_documento } = req.params;
+      
+      const paciente = await Paciente.findByPk(numero_documento, {
+        attributes: ['numero_documento', 'nombre', 'apellidos', 'foto_path']
+      });
+      
+      if (!paciente) {
+        return res.status(404).json({ message: 'Paciente no encontrado' });
+      }
+      
+      if (!paciente.foto_path) {
+        return res.status(404).json({ message: 'El paciente no tiene foto registrada' });
+      }
+      
+      return res.status(200).json({
+        message: 'Foto obtenida correctamente',
+        data: {
+          foto_path: paciente.foto_path
+        }
+      });
+    } catch (error: any) {
+      console.error('Error obteniendo foto del paciente:', error);
+      return res.status(500).json({
+        message: 'Error obteniendo la foto del paciente',
+        error: error.message
+      });
+    }
+  };
+
+
+
+
+
+
+
+
+
+
+
+
+
 export const crearPaciente = async (req: Request, res: Response): Promise<any> => {
     const {nombre, apellidos, fecha_nacimiento,sexo, ciudad_nacimiento,edad,tipo_documento,numero_documento,ciudad_expedicion,ciudad_domicilio,barrio,direccion_domicilio,telefono,email,celular,ocupacion,estado_civil,eps,tipo_afiliacion,grupo_sanguineo,rh,alergias,antecedentes,antecedentes_familiares,consentimiento_info}= req.body
     

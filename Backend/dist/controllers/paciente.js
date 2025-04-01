@@ -12,12 +12,167 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.actualizarDatosPaciente = exports.obtenerPacienteId = exports.obtenerPacientes = exports.crearPaciente = void 0;
+exports.actualizarDatosPaciente = exports.obtenerPacienteId = exports.obtenerPacientes = exports.crearPaciente = exports.obtenerFotoPaciente = exports.eliminarFotoPaciente = exports.actualizarFotoPaciente = exports.uploadPacienteFoto = void 0;
 const paciente_1 = require("../models/paciente");
 const dotenv_1 = __importDefault(require("dotenv"));
 const dayjs_1 = __importDefault(require("dayjs"));
 const encriptado_1 = require("./encriptado");
+const multer_1 = __importDefault(require("multer"));
+const path_1 = __importDefault(require("path"));
+const fs_1 = __importDefault(require("fs"));
 dotenv_1.default.config();
+const pacientesStorage = multer_1.default.diskStorage({
+    destination: (req, file, cb) => {
+        const dir = path_1.default.join(__dirname, '../../uploads/pacientes/fotos');
+        if (!fs_1.default.existsSync(dir)) {
+            fs_1.default.mkdirSync(dir, { recursive: true });
+        }
+        cb(null, dir);
+    },
+    filename: (req, file, cb) => {
+        const ext = path_1.default.extname(file.originalname);
+        // Usar número de documento como parte del nombre para fácil identificación
+        const documento = req.params.numero_documento || "temp";
+        const uniqueFilename = `paciente_${documento}_${Date.now()}${ext}`;
+        cb(null, uniqueFilename);
+    }
+});
+// Filtro para solo permitir imágenes
+const imageFilter = (req, file, cb) => {
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+    if (allowedTypes.includes(file.mimetype)) {
+        cb(null, true);
+    }
+    else {
+        cb(new Error('Formato de archivo no válido. Solo se permiten imágenes JPEG, JPG y PNG.'), false);
+    }
+};
+exports.uploadPacienteFoto = (0, multer_1.default)({
+    storage: pacientesStorage,
+    fileFilter: imageFilter,
+    limits: { fileSize: 15 * 1024 * 1024 } // Aumentar a 15MB para fotos dermatológicas originales
+});
+/**
+ * Subir o actualizar foto de perfil del paciente
+ */
+const actualizarFotoPaciente = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { numero_documento } = req.params;
+        // Verificar que el paciente existe
+        const paciente = yield paciente_1.Paciente.findByPk(numero_documento);
+        if (!paciente) {
+            if (req.file)
+                fs_1.default.unlinkSync(req.file.path);
+            return res.status(404).json({ message: 'Paciente no encontrado' });
+        }
+        // Verificar que se ha subido un archivo
+        if (!req.file) {
+            return res.status(400).json({ message: 'No se ha subido ningún archivo' });
+        }
+        // Si ya tenía una foto, eliminarla
+        if (paciente.foto_path) {
+            const rutaAnterior = path_1.default.join(__dirname, `../../${paciente.foto_path.replace(/^\//, '')}`);
+            if (fs_1.default.existsSync(rutaAnterior)) {
+                fs_1.default.unlinkSync(rutaAnterior);
+            }
+        }
+        // Guardar la ruta de la nueva imagen
+        const rutaRelativa = `/uploads/pacientes/fotos/${req.file.filename}`;
+        yield paciente.update({
+            foto_path: rutaRelativa
+        });
+        return res.status(200).json({
+            message: 'Foto del paciente actualizada correctamente',
+            data: {
+                foto_path: rutaRelativa
+            }
+        });
+    }
+    catch (error) {
+        console.error('Error actualizando foto del paciente:', error);
+        if (req.file) {
+            try {
+                fs_1.default.unlinkSync(req.file.path);
+            }
+            catch (e) { /* No hacer nada */ }
+        }
+        return res.status(500).json({
+            message: 'Error actualizando la foto del paciente',
+            error: error.message
+        });
+    }
+});
+exports.actualizarFotoPaciente = actualizarFotoPaciente;
+/**
+ * Eliminar foto del paciente
+ */
+const eliminarFotoPaciente = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { numero_documento } = req.params;
+        // Verificar que el paciente existe
+        const paciente = yield paciente_1.Paciente.findByPk(numero_documento);
+        if (!paciente) {
+            return res.status(404).json({ message: 'Paciente no encontrado' });
+        }
+        // Verificar que tiene una foto
+        if (!paciente.foto_path) {
+            return res.status(400).json({ message: 'El paciente no tiene foto registrada' });
+        }
+        // Eliminar archivo físico
+        const rutaImagen = path_1.default.join(__dirname, `../../${paciente.foto_path.replace(/^\//, '')}`);
+        if (fs_1.default.existsSync(rutaImagen)) {
+            fs_1.default.unlinkSync(rutaImagen);
+        }
+        // Actualizar paciente
+        yield paciente.update({
+            foto_path: null
+        });
+        return res.status(200).json({
+            message: 'Foto del paciente eliminada correctamente'
+        });
+    }
+    catch (error) {
+        console.error('Error eliminando foto del paciente:', error);
+        return res.status(500).json({
+            message: 'Error eliminando la foto del paciente',
+            error: error.message
+        });
+    }
+});
+exports.eliminarFotoPaciente = eliminarFotoPaciente;
+/**
+ * Obtener la foto del paciente
+ * Nota: Esta función es opcional ya que puedes acceder directamente
+ * a la imagen a través de la URL pública
+ */
+const obtenerFotoPaciente = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { numero_documento } = req.params;
+        const paciente = yield paciente_1.Paciente.findByPk(numero_documento, {
+            attributes: ['numero_documento', 'nombre', 'apellidos', 'foto_path']
+        });
+        if (!paciente) {
+            return res.status(404).json({ message: 'Paciente no encontrado' });
+        }
+        if (!paciente.foto_path) {
+            return res.status(404).json({ message: 'El paciente no tiene foto registrada' });
+        }
+        return res.status(200).json({
+            message: 'Foto obtenida correctamente',
+            data: {
+                foto_path: paciente.foto_path
+            }
+        });
+    }
+    catch (error) {
+        console.error('Error obteniendo foto del paciente:', error);
+        return res.status(500).json({
+            message: 'Error obteniendo la foto del paciente',
+            error: error.message
+        });
+    }
+});
+exports.obtenerFotoPaciente = obtenerFotoPaciente;
 const crearPaciente = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { nombre, apellidos, fecha_nacimiento, sexo, ciudad_nacimiento, edad, tipo_documento, numero_documento, ciudad_expedicion, ciudad_domicilio, barrio, direccion_domicilio, telefono, email, celular, ocupacion, estado_civil, eps, tipo_afiliacion, grupo_sanguineo, rh, alergias, antecedentes, antecedentes_familiares, consentimiento_info } = req.body;
     try {

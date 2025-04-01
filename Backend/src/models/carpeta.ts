@@ -10,7 +10,8 @@ export class Carpeta extends Model {
   
     public CarpetaId!: number;
     public numero_documento!: string;
-    public imagenes!: Text;
+    public imagen_metadata!: string; // JSON stringificado con info de las imágenes
+    public descripcion?: string;
     public fecha!: Date;
 
 }
@@ -29,15 +30,21 @@ Carpeta.init(
                 key: 'numero_documento'
             },
         },
-        imagenes: {
-            type: DataTypes.TEXT('long'),
-            allowNull: false
-        },
-        fecha: {
+        imagen_metadata: {
+            type: DataTypes.TEXT, // Usamos TEXT en lugar de BLOB
+            allowNull: true,
+            defaultValue: '[]' 
+          },
+          descripcion: {
+            type: DataTypes.STRING,
+            allowNull: true
+          },
+          fecha: {
             type: DataTypes.DATE,
-            allowNull: false
-        }
-    },
+            allowNull: false,
+            defaultValue: DataTypes.NOW
+          }
+        },
     {
         sequelize,
         tableName: "Carpeta",

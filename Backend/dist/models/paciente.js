@@ -112,6 +112,10 @@ Paciente.init({
         type: sequelize_1.DataTypes.STRING,
         allowNull: false
     },
+    foto_path: {
+        type: sequelize_1.DataTypes.STRING(500),
+        allowNull: true
+    },
 }, {
     sequelize: connection_1.default,
     tableName: "Paciente",
