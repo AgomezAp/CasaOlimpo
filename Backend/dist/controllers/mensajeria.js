@@ -24,11 +24,11 @@ const enviarMensaje = (req, res) => __awaiter(void 0, void 0, void 0, function* 
             return res.status(400).json({ error: 'Todos los campos son obligatorios.' });
         }
         // Llamar a la API externa para enviar el mensaje
-        const apiResponse = yield fetch('http://YOUR-LOCAL-OR-CLOUD-URL/api/messages/CrearMensaje', {
+        const apiResponse = yield fetch('https://gestor-de-mesajeria-via-whatsapp-g5hc.onrender.com/api/messages/CrearMensaje', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer YOUR_API_KEY`
+                'Origin': `181.129.218.198`
             },
             body: JSON.stringify({
                 sessionId: "1234",
@@ -66,10 +66,12 @@ const obtenerFecha = (req, res) => __awaiter(void 0, void 0, void 0, function* (
     try {
         const fechaActual = new Date();
         const diaSemana = fechaActual.toLocaleString('es-ES', { weekday: 'long' });
+        const mes = (fechaActual.getMonth() + 1).toString().padStart(2, '0');
+        const dia = (fechaActual.getDate().toString().padStart(2, '0'));
         const clienteConMismaFecha = yield paciente_1.Paciente.findOne({
             where: {
                 fecha_nacimiento: {
-                    [sequelize_1.Op.like]: `%${fechaActual.getMonth() + 1}-${fechaActual.getDate()}%`
+                    [sequelize_1.Op.like]: `%${mes}-${dia}%`
                 }
             }
         });
@@ -79,6 +81,8 @@ const obtenerFecha = (req, res) => __awaiter(void 0, void 0, void 0, function* (
         return res.status(200).json({ dia: diaSemana });
     }
     catch (error) {
+        console.error('Error al obtener la fecha:', error);
+        return res.status(500).json({ error: 'Error interno del servidor.' });
     }
 });
 exports.obtenerFecha = obtenerFecha;

@@ -132,3 +132,19 @@ export const eliminarUsuarioId = async (req: Request,res: Response): Promise<any
         return res.status(500).json({msg:"Error al eliminar el usuario", error:err.message});
     }
 }
+
+
+export const obtenerUsuarios = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const usuarios = await User.findAll();
+    return res.status(200).json({
+      message: "Usuarios obtenidos con éxito",
+      data: usuarios,
+    });
+  } catch (err: any) {
+    return res.status(500).json({
+      message: "Error al obtener los usuarios",
+      error: err.message,
+    });
+  }
+};

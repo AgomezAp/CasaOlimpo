@@ -122,7 +122,7 @@ Paciente.init(
             allowNull: false
         },
         grupo_sanguineo: {
-            type: DataTypes.ENUM('A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'),
+            type: DataTypes.ENUM('A', 'A', 'B', 'B', 'AB', 'AB', 'O', 'O'),
             allowNull: false
         },
         rh: {
