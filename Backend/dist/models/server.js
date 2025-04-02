@@ -78,19 +78,20 @@ class Server {
             try {
                 /* {force: true}{alter: true} */
                 yield connection_1.default.authenticate();
+                // Primer nivel: tablas independientes
                 yield user_2.User.sync();
                 yield paciente_2.Paciente.sync();
+                // Segundo nivel: tablas con dependencias simples
                 yield consulta_2.Consulta.sync();
-                yield agenda_2.Agenda.sync();
                 yield redfamiliar_2.RedFamiliar.sync();
+                // Tercer nivel: tablas que dependen del segundo nivel
                 yield carpeta_2.Carpeta.sync();
+                yield agenda_2.Agenda.sync();
+                yield agendaNoRegistrados_2.AgendaNoRegistrados.sync();
+                // Cuarto nivel: tablas con dependencias complejas
+                yield receta_2.Receta.sync();
                 yield facturacion_2.Factura.sync();
                 yield descuento_2.Descuento.sync();
-                yield receta_2.Receta.sync();
-                yield agendaNoRegistrados_2.AgendaNoRegistrados.sync();
-                /*
-     await Receta.sync({force: true});
-                */
                 console.log('Conexión establecida correctamente');
             }
             catch (error) {

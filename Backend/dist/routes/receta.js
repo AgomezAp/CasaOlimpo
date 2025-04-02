@@ -1,5 +1,11 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
+const receta_1 = require("../controllers/receta");
 const router = (0, express_1.Router)();
+router.get('/api/paciente/recetas/obtenerRecetas', receta_1.obtenerRecetas);
+router.get('/api/paciente/recetas/activas/:numero_documento', receta_1.obtenerRecetasActivas);
+router.post('/api/paciente/recetas/crear', receta_1.crearReceta);
+router.put('/api/paciente/recetas/:RecetaId', receta_1.editarReceta);
+router.patch('/api/paciente/recetas/:RecetaId/completar', receta_1.completarReceta);
 exports.default = router;

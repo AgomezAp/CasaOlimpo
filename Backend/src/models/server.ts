@@ -70,19 +70,24 @@ class Server{
         try{
             /* {force: true}{alter: true} */
             await sequelize.authenticate();
-            await User.sync();
-            await Paciente.sync();
-            await Consulta.sync();
-            await Agenda.sync();
-            await RedFamiliar.sync();
-            await Carpeta.sync();
-            await Factura.sync();
-            await Descuento.sync();
-            await Receta.sync(); 
-            await AgendaNoRegistrados.sync();
-            /*  
- await Receta.sync({force: true}); 
-            */
+        // Primer nivel: tablas independientes
+        await User.sync();
+        await Paciente.sync();
+        
+        // Segundo nivel: tablas con dependencias simples
+        await Consulta.sync();
+        await RedFamiliar.sync();
+        
+        // Tercer nivel: tablas que dependen del segundo nivel
+        await Carpeta.sync();
+        await Agenda.sync();
+        await AgendaNoRegistrados.sync();
+        
+        // Cuarto nivel: tablas con dependencias complejas
+        await Receta.sync(); 
+        await Factura.sync();
+        await Descuento.sync();
+        
             console.log('Conexión establecida correctamente');
         }catch (error){
             console.log("Error de conexion",error); 
