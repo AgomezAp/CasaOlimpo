@@ -24,6 +24,7 @@ export class Consulta extends Model {
     public correo!: string;
     public consentimiento_info !: Buffer;
     public consentimiento_check !: boolean;
+    public abierto !: boolean;
 }
 
 Consulta.init(
