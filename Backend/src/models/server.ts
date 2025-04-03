@@ -1,7 +1,7 @@
 import cors from 'cors';
 import dotenv from 'dotenv';
 import express, { Application } from 'express';
-
+import * as path from 'path';
 import sequelize from '../database/connection';
 import RAgenda from '../routes/agenda';
 import RCarpeta from '../routes/carpeta';
@@ -58,6 +58,7 @@ class Server{
         this.app.use(RAgendaNoRegistrados);
     }
     middlewares(){
+        this.app.use('/uploads', express.static(path.join(__dirname, '../../uploads')));
         this.app.use(express.json())
         this.app.use(rateLimiter);
         this.app.use(cors({

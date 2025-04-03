@@ -179,6 +179,36 @@ export const subirImagen = async (req: Request, res: Response): Promise<any> => 
     });
   }
 };
+export const obtenerImagenesCarpeta = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const { CarpetaId } = req.params;
+    
+    // Verificar que la carpeta existe
+    const carpeta = await Carpeta.findByPk(CarpetaId);
+    if (!carpeta) {
+      return res.status(404).json({ message: 'Carpeta no encontrada' });
+    }
+    
+    // Obtener metadata de imágenes
+    let imagenes = [];
+    try {
+      imagenes = JSON.parse(carpeta.imagen_metadata);
+    } catch (e) {
+      imagenes = [];
+    }
+    
+    return res.status(200).json({
+      message: 'Imágenes obtenidas correctamente',
+      data: imagenes
+    });
+  } catch (error: any) {
+    console.error('Error obteniendo imágenes:', error);
+    return res.status(500).json({
+      message: 'Error obteniendo las imágenes',
+      error: error.message
+    });
+  }
+};
 
 // Eliminar una imagen de una carpeta
 export const eliminarImagen = async (req: Request, res: Response): Promise<any> => {
