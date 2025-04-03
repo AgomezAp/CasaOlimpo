@@ -174,7 +174,7 @@ const obtenerFotoPaciente = (req, res) => __awaiter(void 0, void 0, void 0, func
 });
 exports.obtenerFotoPaciente = obtenerFotoPaciente;
 const crearPaciente = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { nombre, apellidos, fecha_nacimiento, sexo, ciudad_nacimiento, edad, tipo_documento, numero_documento, ciudad_expedicion, ciudad_domicilio, barrio, direccion_domicilio, telefono, email, celular, ocupacion, estado_civil, eps, tipo_afiliacion, grupo_sanguineo, rh, alergias, antecedentes, antecedentes_familiares, consentimiento_info } = req.body;
+    const { nombre, apellidos, fecha_nacimiento, sexo, ciudad_nacimiento, edad, tipo_documento, numero_documento, ciudad_expedicion, ciudad_domicilio, barrio, direccion_domicilio, telefono, email, celular, ocupacion, estado_civil, eps, tipo_afiliacion, grupo_sanguineo, rh, alergias, antecedentes, antecedentes_familiares } = req.body;
     try {
         const paciente = yield paciente_1.Paciente.findOne({ where: { numero_documento } });
         if (paciente) {
@@ -217,7 +217,6 @@ const crearPaciente = (req, res) => __awaiter(void 0, void 0, void 0, function* 
             alergias: alergiasCifradas,
             antecedentes: antecedentesCifrados,
             antecedentes_familiares: antecedentesFamiliaresCifrados,
-            consentimiento_info
         });
         return res.status(201).json({
             message: "Paciente registrado correctamente",

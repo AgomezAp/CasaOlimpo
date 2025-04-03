@@ -12,6 +12,7 @@ import RPaciente from '../routes/paciente';
 import RReceta from '../routes/receta';
 import RRedFamiliar from '../routes/redfamiliar';
 import RUser from '../routes/user';
+import RMensajeria from '../routes/mensajeria';
 import { Agenda } from './agenda';
 import { Carpeta } from './carpeta';
 import { Consulta } from './consulta';
@@ -56,6 +57,7 @@ class Server{
         this.app.use(RRedFamiliar);
         this.app.use(RUser)
         this.app.use(RAgendaNoRegistrados);
+        this.app.use(RMensajeria);
     }
     middlewares(){
         this.app.use('/uploads', express.static(path.join(__dirname, '../../uploads')));
@@ -76,7 +78,7 @@ class Server{
         await Paciente.sync();
         
         // Segundo nivel: tablas con dependencias simples
-        await Consulta.sync();
+        await Consulta.sync({alter: true});
         await RedFamiliar.sync();
         
         // Tercer nivel: tablas que dependen del segundo nivel

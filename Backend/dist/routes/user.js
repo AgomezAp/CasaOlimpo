@@ -7,4 +7,5 @@ router.post('/api/usuario/registrar', user_1.registrarUsuario);
 router.post('/api/usuario/iniciar-sesion', user_1.iniciarSesion);
 router.patch('/api/usuario/reestablecer-contrasena', user_1.reestablecerContraseña);
 router.delete('/api/usuario/eliminar/:Uid', user_1.eliminarUsuarioId);
+router.get('/api/usuario/obtener', user_1.obtenerUsuarios);
 exports.default = router;

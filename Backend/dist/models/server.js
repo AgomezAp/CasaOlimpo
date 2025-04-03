@@ -59,6 +59,7 @@ const paciente_1 = __importDefault(require("../routes/paciente"));
 const receta_1 = __importDefault(require("../routes/receta"));
 const redfamiliar_1 = __importDefault(require("../routes/redfamiliar"));
 const user_1 = __importDefault(require("../routes/user"));
+const mensajeria_1 = __importDefault(require("../routes/mensajeria"));
 const agenda_2 = require("./agenda");
 const carpeta_2 = require("./carpeta");
 const consulta_2 = require("./consulta");
@@ -97,6 +98,7 @@ class Server {
         this.app.use(redfamiliar_1.default);
         this.app.use(user_1.default);
         this.app.use(agendaNoRegistrados_1.default);
+        this.app.use(mensajeria_1.default);
     }
     middlewares() {
         this.app.use('/uploads', express_1.default.static(path.join(__dirname, '../../uploads')));
@@ -117,7 +119,7 @@ class Server {
                 yield user_2.User.sync();
                 yield paciente_2.Paciente.sync();
                 // Segundo nivel: tablas con dependencias simples
-                yield consulta_2.Consulta.sync();
+                yield consulta_2.Consulta.sync({ alter: true });
                 yield redfamiliar_2.RedFamiliar.sync();
                 // Tercer nivel: tablas que dependen del segundo nivel
                 yield carpeta_2.Carpeta.sync();

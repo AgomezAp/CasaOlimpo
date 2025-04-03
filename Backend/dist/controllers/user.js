@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.eliminarUsuarioId = exports.reestablecerContraseña = exports.iniciarSesion = exports.registrarUsuario = void 0;
+exports.obtenerUsuarios = exports.eliminarUsuarioId = exports.reestablecerContraseña = exports.iniciarSesion = exports.registrarUsuario = void 0;
 const user_1 = require("../models/user");
 const bcrypt_1 = __importDefault(require("bcrypt"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
@@ -129,3 +129,19 @@ const eliminarUsuarioId = (req, res) => __awaiter(void 0, void 0, void 0, functi
     }
 });
 exports.eliminarUsuarioId = eliminarUsuarioId;
+const obtenerUsuarios = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const usuarios = yield user_1.User.findAll();
+        return res.status(200).json({
+            message: "Usuarios obtenidos con éxito",
+            data: usuarios,
+        });
+    }
+    catch (err) {
+        return res.status(500).json({
+            message: "Error al obtener los usuarios",
+            error: err.message,
+        });
+    }
+});
+exports.obtenerUsuarios = obtenerUsuarios;

@@ -4,6 +4,6 @@ const router = Router();
 
 router.post("/api/consulta/crear", nuevaConsulta);
 router.get("/api/consulta/obtener", getConsulta);
-router.put("/api/consulta/update",updateConsulta)
+router.put("/api/consulta/update/:Cid",updateConsulta)
 
 export default router;

@@ -85,6 +85,10 @@ Consulta.init({
         type: sequelize_1.DataTypes.BOOLEAN,
         allowNull: true,
     },
+    abierto: {
+        type: sequelize_1.DataTypes.BOOLEAN,
+        allowNull: false,
+    },
 }, {
     sequelize: connection_1.default,
     tableName: "Consulta",

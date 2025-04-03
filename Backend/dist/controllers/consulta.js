@@ -14,13 +14,13 @@ const consulta_1 = require("../models/consulta");
 const paciente_1 = require("../models/paciente");
 const nuevaConsulta = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const { motivo, enfermedad_actual, objetivos_terapia, historia_problema, desarrollo, plan_terapeutico, tipo_diagnostico, analisis_diagnostico, plan_tratamiento, recomendaciones, numero_documento, fecha, correo, consentimiento_info, consentimiento_check } = req.body;
+        const { motivo, enfermedad_actual, objetivos_terapia, historia_problema, desarrollo, plan_terapeutico, tipo_diagnostico, analisis_diagnostico, plan_tratamiento, recomendaciones, numero_documento, fecha, correo, consentimiento_info, consentimiento_check, abierto } = req.body;
         const paciente = yield paciente_1.Paciente.findAll({
             where: {
                 numero_documento: numero_documento,
             },
         });
-        if (!paciente) {
+        if (paciente.length === 0) {
             return res.status(404).json({ message: "El paciente no existe", });
         }
         const nuevaConsulta = yield consulta_1.Consulta.create({
@@ -39,6 +39,7 @@ const nuevaConsulta = (req, res) => __awaiter(void 0, void 0, void 0, function* 
             correo,
             consentimiento_info,
             consentimiento_check,
+            abierto,
         });
         return res.status(201).json(nuevaConsulta);
     }
@@ -52,7 +53,11 @@ const getConsulta = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
     try {
         const { Cid } = req.body;
         const consulta = yield consulta_1.Consulta.findOne({ where: Cid });
-        res.status(201).json(consulta);
+        console.log(consulta);
+        if (consulta === null) {
+            return res.status(404).json({ message: 'La consulta no existe' });
+        }
+        return res.status(200).json(consulta);
     }
     catch (error) {
         console.error('Error al crear la consulta:', error);
@@ -64,12 +69,15 @@ const updateConsulta = (req, res) => __awaiter(void 0, void 0, void 0, function*
     try {
         const { Cid } = req.params;
         const updatedData = req.body;
+        if (!Cid) {
+            return res.status(400).json({ message: "id de la consulta no encontrado" });
+        }
         const consulta = yield consulta_1.Consulta.findByPk(Cid);
         if (!consulta) {
             return res.status(404).json({ message: "Consulta no encontrada" });
         }
-        else if (!consulta.abierto) {
-            return res.status(400).json({ message: "La consulta ya ha sido cerrada" });
+        if (consulta.abierto === false) {
+            return res.status(400).json({ message: "La consulta ya ha sido cerrada y no se puede actualizar" });
         }
         yield consulta.update(updatedData);
         return res.status(200).json(consulta);
