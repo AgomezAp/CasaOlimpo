@@ -68,17 +68,13 @@ const obtenerFecha = (req, res) => __awaiter(void 0, void 0, void 0, function* (
         const diaSemana = fechaActual.toLocaleString('es-ES', { weekday: 'long' });
         const mes = (fechaActual.getMonth() + 1).toString().padStart(2, '0');
         const dia = (fechaActual.getDate().toString().padStart(2, '0'));
-        const clienteConMismaFecha = yield paciente_1.Paciente.findOne({
-            where: {
-                fecha_nacimiento: {
-                    [sequelize_1.Op.like]: `%${mes}-${dia}%`
-                }
-            }
+        const clienteConMismaFecha = yield paciente_1.Paciente.findAll({
+            where: sequelize_1.Sequelize.where(sequelize_1.Sequelize.fn('TO_CHAR', sequelize_1.Sequelize.col('fecha_nacimiento'), 'MM-DD'), `${mes}-${dia}`)
         });
-        if (clienteConMismaFecha) {
-            return res.status(200).json({ dia: diaSemana, cliente: clienteConMismaFecha });
+        if (clienteConMismaFecha.length > 0) {
+            return res.status(200).json({ dia: diaSemana, pacientes: clienteConMismaFecha });
         }
-        return res.status(200).json({ dia: diaSemana });
+        return res.status(200).json({ dia: diaSemana, message: 'No hay pacientes cumpliendo años hoy.' });
     }
     catch (error) {
         console.error('Error al obtener la fecha:', error);

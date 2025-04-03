@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { Paciente } from '../models/paciente';
-import { Op } from 'sequelize';
+import { Op, Sequelize } from 'sequelize';
 import schedule from 'node-schedule';
 
 export const enviarMensaje = async (req: Request, res: Response): Promise<any> => {
@@ -56,18 +56,17 @@ export const obtenerFecha = async (req: Request, res: Response): Promise<any> =>
         const diaSemana = fechaActual.toLocaleString('es-ES', { weekday: 'long' });
         const mes = (fechaActual.getMonth()+1).toString().padStart(2, '0');
         const dia = (fechaActual.getDate().toString().padStart(2,'0'));
-        const clienteConMismaFecha = await Paciente.findOne({
-            where: {
-                fecha_nacimiento: {
-                    [Op.like]: `%${mes}-${dia}%`
-                }
-            }
+        const clienteConMismaFecha = await Paciente.findAll({
+            where: Sequelize.where(
+                Sequelize.fn('TO_CHAR', Sequelize.col('fecha_nacimiento'), 'MM-DD'),
+                `${mes}-${dia}`
+            )
         });
 
-        if (clienteConMismaFecha) {
-            return res.status(200).json({ dia: diaSemana, cliente: clienteConMismaFecha });
+        if (clienteConMismaFecha.length > 0) {
+            return res.status(200).json({ dia: diaSemana, pacientes: clienteConMismaFecha });
         }
-        return res.status(200).json({ dia: diaSemana });
+        return res.status(200).json({ dia: diaSemana, message: 'No hay pacientes cumpliendo años hoy.' });
     } catch (error) {
         console.error('Error al obtener la fecha:', error);
         return res.status(500).json({ error: 'Error interno del servidor.' });
