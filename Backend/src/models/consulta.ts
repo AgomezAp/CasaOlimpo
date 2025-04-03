@@ -102,6 +102,10 @@ Consulta.init(
             type: DataTypes.BOOLEAN,
             allowNull: true,
         },
+        abierto: {
+            type: DataTypes.BOOLEAN,
+            allowNull: false,
+        },
     },
     {
         sequelize,

@@ -3,7 +3,7 @@ import { Paciente } from '../models/paciente';
 import { Op } from 'sequelize';
 import schedule from 'node-schedule';
 
-export const enviarMensaje = async (req: Request, res: Response): Promise<Response> => {
+export const enviarMensaje = async (req: Request, res: Response): Promise<any> => {
     try {
         const {  phoneNumberCliente, phoneNumberMaestro, nombreDelCliente, message } = req.body;
         // Validar que todos los campos requeridos estén presentes
@@ -11,11 +11,11 @@ export const enviarMensaje = async (req: Request, res: Response): Promise<Respon
             return res.status(400).json({ error: 'Todos los campos son obligatorios.' });
         }
         // Llamar a la API externa para enviar el mensaje
-        const apiResponse = await fetch('http://YOUR-LOCAL-OR-CLOUD-URL/api/messages/CrearMensaje', {
+        const apiResponse = await fetch('https://gestor-de-mesajeria-via-whatsapp-g5hc.onrender.com/api/messages/CrearMensaje', {
             method: 'POST',
             headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer YOUR_API_KEY`
+            'Origin': `181.129.218.198`
             },
             body: JSON.stringify({
                 sessionId: "1234",
@@ -54,10 +54,12 @@ export const obtenerFecha = async (req: Request, res: Response): Promise<any> =>
     try {
         const fechaActual = new Date();
         const diaSemana = fechaActual.toLocaleString('es-ES', { weekday: 'long' });
+        const mes = (fechaActual.getMonth()+1).toString().padStart(2, '0');
+        const dia = (fechaActual.getDate().toString().padStart(2,'0'));
         const clienteConMismaFecha = await Paciente.findOne({
             where: {
                 fecha_nacimiento: {
-                    [Op.like]: `%${fechaActual.getMonth() + 1}-${fechaActual.getDate()}%`
+                    [Op.like]: `%${mes}-${dia}%`
                 }
             }
         });
@@ -67,7 +69,8 @@ export const obtenerFecha = async (req: Request, res: Response): Promise<any> =>
         }
         return res.status(200).json({ dia: diaSemana });
     } catch (error) {
-        
+        console.error('Error al obtener la fecha:', error);
+        return res.status(500).json({ error: 'Error interno del servidor.' });
     }
 }
 

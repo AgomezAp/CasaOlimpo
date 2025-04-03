@@ -93,7 +93,7 @@ Paciente.init({
         allowNull: false
     },
     grupo_sanguineo: {
-        type: sequelize_1.DataTypes.ENUM('A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'),
+        type: sequelize_1.DataTypes.ENUM('A', 'A', 'B', 'B', 'AB', 'AB', 'O', 'O'),
         allowNull: false
     },
     rh: {
