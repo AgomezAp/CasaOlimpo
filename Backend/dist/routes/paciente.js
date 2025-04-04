@@ -10,4 +10,5 @@ router.patch("/api/paciente/actualizar/:numero_documento", paciente_1.actualizar
 router.post("/api/paciente/:numero_documento/foto", [paciente_1.uploadPacienteFoto.single("foto")], paciente_1.actualizarFotoPaciente);
 router.delete('/api/paciente/:numero_documento/foto', paciente_1.eliminarFotoPaciente);
 router.get('/api/paciente/:numero_documento/foto', paciente_1.obtenerFotoPaciente);
+router.get('/api/doctor/:Uid/pacientes', paciente_1.obtenerPacientesPorDoctor);
 exports.default = router;

@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Paciente = void 0;
 const sequelize_1 = require("sequelize");
 const connection_1 = __importDefault(require("../database/connection"));
+const user_1 = require("./user");
 class Paciente extends sequelize_1.Model {
 }
 exports.Paciente = Paciente;
@@ -14,6 +15,14 @@ Paciente.init({
         type: sequelize_1.DataTypes.INTEGER,
         autoIncrement: true,
         allowNull: false
+    },
+    Uid: {
+        type: sequelize_1.DataTypes.INTEGER,
+        allowNull: false,
+        references: {
+            model: 'User',
+            key: 'Uid'
+        }
     },
     nombre: {
         type: sequelize_1.DataTypes.STRING,
@@ -93,8 +102,8 @@ Paciente.init({
         allowNull: false
     },
     grupo_sanguineo: {
-        type: sequelize_1.DataTypes.ENUM('A', 'A', 'B', 'B', 'AB', 'AB', 'O', 'O'),
-        allowNull: false
+        type: sequelize_1.DataTypes.ENUM('A', 'B', 'AB', 'O'),
+        allowNull: true
     },
     rh: {
         type: sequelize_1.DataTypes.ENUM('+', '-'),
@@ -120,4 +129,13 @@ Paciente.init({
     sequelize: connection_1.default,
     tableName: "Paciente",
     timestamps: false,
+});
+Paciente.belongsTo(user_1.User, {
+    foreignKey: 'Uid',
+    as: 'doctor'
+});
+// Asociación inversa: Un doctor puede tener muchos pacientes
+user_1.User.hasMany(Paciente, {
+    foreignKey: 'Uid',
+    as: 'pacientes'
 });

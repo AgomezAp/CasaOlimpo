@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.eliminarImagen = exports.subirImagen = exports.crearCarpeta = exports.obtenerCarpeta = exports.upload = void 0;
+exports.eliminarImagen = exports.obtenerImagenesCarpeta = exports.subirImagen = exports.crearCarpeta = exports.obtenerCarpeta = exports.upload = void 0;
 const carpeta_1 = require("../models/carpeta");
 const paciente_1 = require("../models/paciente");
 const fs_1 = __importDefault(require("fs"));
@@ -180,6 +180,36 @@ const subirImagen = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
     }
 });
 exports.subirImagen = subirImagen;
+const obtenerImagenesCarpeta = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { CarpetaId } = req.params;
+        // Verificar que la carpeta existe
+        const carpeta = yield carpeta_1.Carpeta.findByPk(CarpetaId);
+        if (!carpeta) {
+            return res.status(404).json({ message: 'Carpeta no encontrada' });
+        }
+        // Obtener metadata de imágenes
+        let imagenes = [];
+        try {
+            imagenes = JSON.parse(carpeta.imagen_metadata);
+        }
+        catch (e) {
+            imagenes = [];
+        }
+        return res.status(200).json({
+            message: 'Imágenes obtenidas correctamente',
+            data: imagenes
+        });
+    }
+    catch (error) {
+        console.error('Error obteniendo imágenes:', error);
+        return res.status(500).json({
+            message: 'Error obteniendo las imágenes',
+            error: error.message
+        });
+    }
+});
+exports.obtenerImagenesCarpeta = obtenerImagenesCarpeta;
 // Eliminar una imagen de una carpeta
 const eliminarImagen = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {

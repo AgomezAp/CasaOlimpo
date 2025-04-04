@@ -7,115 +7,104 @@ import { User } from '../models/user';
 
 // Obtener todas las recetas
 export const obtenerRecetas = async (req: Request, res: Response): Promise<any> => {
-    try {
-      const recetas = await Receta.findAll({
-        include: [
-          { 
-            model: Consulta, 
-            as: 'consulta',
-            include: [{ model: Paciente, as: 'paciente' }]
-          },
-          {
-            model: User,
-            as: 'doctor',
-            attributes: ['Uid', 'nombre', 'apellido', 'especialidad']
-          }
-        ],
-        order: [['fecha_emision', 'DESC']]
-      });
-      
-      return res.status(200).json({
-        message: 'Recetas obtenidas correctamente',
-        data: recetas
-      });
-    } catch (error: any) {
-      console.error('Error obteniendo recetas:', error);
-      return res.status(500).json({
-        message: 'Error obteniendo las recetas',
-        error: error.message
-      });
-    }
-  };
-  
-  // Crear receta (con validación de una sola receta activa)
-  export const crearReceta = async (req: Request, res: Response): Promise<any> => {
-    try {
-      const { 
-        Cid, // Usando Cid en lugar de ConsultaId (basado en tu modelo)
-        medicamentos, 
-        instrucciones,
-        duracion_tratamiento,
-        diagnostico,
-        observaciones,
-        anotaciones
-      } = req.body;
-      
-      // Obtener el Uid del token (usuario autenticado)
-      const Uid = req.body.usuarioAutenticado.Uid;
-      
-      // Verificar que la consulta existe
-      const consulta = await Consulta.findByPk(Cid);
-      
-      if (!consulta) {
-        return res.status(404).json({ message: 'Consulta no encontrada' });
-      }
-      
-      // Obtener el número de documento del paciente
-      const numero_documento = consulta.numero_documento;
-      
-      // Buscar recetas activas para este paciente
-      const recetasActivas = await Receta.findAll({
-        where: {
-          numero_documento,
-          estado: 'ACTIVA'
+  try {
+    const recetas = await Receta.findAll({
+      include: [
+        {
+          model: User,
+          as: 'doctor',
+          attributes: ['Uid', 'nombre', 'rol']
         }
-      });
-      
-      // Cambiar el estado de las recetas previas a COMPLETADA
-      if (recetasActivas.length > 0) {
-        await Promise.all(
-          recetasActivas.map(async (receta) => {
-            await receta.update({
-              estado: 'COMPLETADA',
-              // Opcional: añadir un campo para registrar cuándo/por qué se completó
-              observaciones: receta.observaciones 
-                ? `${receta.observaciones}\n[AUTO] Completada al crear nueva receta el ${new Date().toISOString()}`
-                : `[AUTO] Completada al crear nueva receta el ${new Date().toISOString()}`
-            });
-          })
-        );
-      }
-      
-      // Crear la nueva receta
-      const nuevaReceta = await Receta.create({
-        Cid,         // Usar Cid en lugar de ConsultaId
-        Uid,         // Médico que emite la receta
-        numero_documento,
-        medicamentos,
-        instrucciones,
-        duracion_tratamiento,
-        diagnostico,
-        observaciones,
-        anotaciones,
-        fecha_emision: new Date(),
-        estado: 'ACTIVA',
-        editada: false
-      });
-      
-      return res.status(201).json({
-        message: 'Receta creada correctamente. Recetas previas marcadas como completadas.',
-        data: nuevaReceta,
-        recetasCompletadas: recetasActivas.length
-      });
-    } catch (error: any) {
-      console.error('Error creando receta:', error);
-      return res.status(500).json({
-        message: 'Error creando la receta',
-        error: error.message
-      });
-    }
-  };
+      ],
+      order: [['fecha_emision', 'DESC']]
+    });
+    
+    return res.status(200).json({
+      message: 'Recetas obtenidas correctamente',
+      data: recetas
+    });
+  } catch (error: any) {
+    console.error('Error obteniendo recetas:', error);
+    return res.status(500).json({
+      message: 'Error obteniendo las recetas',
+      error: error.message
+    });
+  }
+};
+
   
+export const crearReceta = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const { 
+      medicamentos, 
+      instrucciones,
+      duracion_tratamiento,
+      diagnostico,
+      observaciones,
+      anotaciones,
+      Uid // Recibir el Uid directamente del body por ahora
+    } = req.body;
+    
+    // Obtener número de documento desde los parámetros de la URL
+    const { numero_documento } = req.params;
+    
+    // Verificar que el paciente existe
+    const paciente = await Paciente.findByPk(numero_documento);
+    if (!paciente) {
+      return res.status(404).json({ message: 'Paciente no encontrado' });
+    }
+    
+    // Verificar que la consulta existe (si se proporciona)
+    // Buscar recetas activas para este paciente
+    const recetasActivas = await Receta.findAll({
+      where: {
+        numero_documento,
+        estado: 'ACTIVA'
+      }
+    });
+    
+    // Cambiar el estado de las recetas previas a COMPLETADA
+    if (recetasActivas.length > 0) {
+      await Promise.all(
+        recetasActivas.map(async (receta) => {
+          await receta.update({
+            estado: 'COMPLETADA',
+            observaciones: receta.observaciones 
+              ? `${receta.observaciones}\n[AUTO] Completada al crear nueva receta el ${new Date().toISOString()}`
+              : `[AUTO] Completada al crear nueva receta el ${new Date().toISOString()}`
+          });
+        })
+      );
+    }
+    
+    // Crear la nueva receta con Uid temporal si no se proporciona
+    const nuevaReceta = await Receta.create({
+      Uid: Uid || 1, // Usar 1 como Uid temporal si no se proporciona
+      numero_documento,
+      medicamentos,
+      instrucciones,
+      duracion_tratamiento,
+      diagnostico,
+      observaciones,
+      anotaciones,
+      fecha_emision: new Date(),
+      estado: 'ACTIVA',
+      editada: false
+    });
+    
+    return res.status(201).json({
+      message: 'Receta creada correctamente. Recetas previas marcadas como completadas.',
+      data: nuevaReceta,
+      recetasCompletadas: recetasActivas.length
+    });
+  } catch (error: any) {
+    console.error('Error creando receta:', error);
+    return res.status(500).json({
+      message: 'Error creando la receta',
+      error: error.message
+    });
+  }
+};
   // Editar receta con restricción de tiempo (48 horas)
   export const editarReceta = async (req: Request, res: Response): Promise<any> => {
     try {
@@ -183,15 +172,48 @@ export const obtenerRecetas = async (req: Request, res: Response): Promise<any> 
       });
     }
   };
-  
+  export const obtenerRecetasPorPaciente = async (req: Request, res: Response): Promise<any> => {
+    try {
+      const { numero_documento } = req.params;
+      
+      // Verificar que el paciente existe
+      const paciente = await Paciente.findByPk(numero_documento);
+      if (!paciente) {
+        return res.status(404).json({ message: 'Paciente no encontrado' });
+      }
+      
+      const recetas = await Receta.findAll({
+        where: { numero_documento },
+        include: [
+          {
+            model: User,
+            as: 'doctor',
+            attributes: ['Uid', 'nombre', 'rol']
+          }
+        ],
+        order: [['fecha_emision', 'DESC']]
+      });
+      
+      return res.status(200).json({
+        message: 'Recetas del paciente obtenidas correctamente',
+        data: recetas
+      });
+    } catch (error: any) {
+      console.error('Error obteniendo recetas del paciente:', error);
+      return res.status(500).json({
+        message: 'Error obteniendo recetas del paciente',
+        error: error.message
+      });
+    }
+  };
   // Método adicional para completar manualmente una receta
   export const completarReceta = async (req: Request, res: Response): Promise<any> => {
     try {
-      const { recetaId } = req.params;
+      const { RecetaId } = req.params;
       const { motivo } = req.body;
       
       // Buscar la receta
-      const receta = await Receta.findByPk(recetaId);
+      const receta = await Receta.findByPk(RecetaId);
       
       if (!receta) {
         return res.status(404).json({ message: 'Receta no encontrada' });
@@ -229,38 +251,43 @@ export const obtenerRecetas = async (req: Request, res: Response): Promise<any> 
   };
   
   // Método para obtener recetas activas de un paciente
-  export const obtenerRecetasActivas = async (req: Request, res: Response): Promise<any> => {
-    try {
-      const { numero_documento } = req.params;
-      
-      const recetas = await Receta.findAll({
-        where: {
-          numero_documento,
-          estado: 'ACTIVA'
-        },
-        include: [
-          { 
-            model: Consulta, 
-            as: 'consulta'
-          },
-          {
-            model: User,
-            as: 'doctor',
-            attributes: ['Uid', 'nombre', 'apellido', 'especialidad']
-          }
-        ],
-        order: [['fecha_emision', 'DESC']]
-      });
-      
-      return res.status(200).json({
-        message: 'Recetas activas obtenidas correctamente',
-        data: recetas
-      });
-    } catch (error: any) {
-      console.error('Error obteniendo recetas activas:', error);
-      return res.status(500).json({
-        message: 'Error obteniendo recetas activas',
-        error: error.message
-      });
+   
+// Método para obtener recetas activas de un paciente
+// Obtener recetas activas
+export const obtenerRecetasActivas = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const { numero_documento } = req.params;
+    
+    // Verificar que el paciente existe
+    const paciente = await Paciente.findByPk(numero_documento);
+    if (!paciente) {
+      return res.status(404).json({ message: 'Paciente no encontrado' });
     }
-  };
+    
+    const recetas = await Receta.findAll({
+      where: {
+        numero_documento,
+        estado: 'ACTIVA'
+      },
+      include: [
+        {
+          model: User,
+          as: 'doctor',
+          attributes: ['Uid', 'nombre',  'rol']
+        }
+      ],
+      order: [['fecha_emision', 'DESC']]
+    });
+    
+    return res.status(200).json({
+      message: 'Recetas activas obtenidas correctamente',
+      data: recetas
+    });
+  } catch (error: any) {
+    console.error('Error obteniendo recetas activas:', error);
+    return res.status(500).json({
+      message: 'Error obteniendo recetas activas',
+      error: error.message
+    });
+  }
+};

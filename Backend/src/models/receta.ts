@@ -8,7 +8,6 @@ import { Consulta } from "./consulta";
 export class Receta extends Model {
   public RecetaId!: number;
   public Uid!: number;
-  public Cid!: number;
   public anotaciones!: string;
   public numero_documento!: string;
   public medicamentos!: string;
@@ -30,14 +29,6 @@ Receta.init(
       type: DataTypes.INTEGER,
       autoIncrement: true,
       primaryKey: true,
-    },
-    Cid: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      references: {
-        model: "Consulta",
-        key: "Cid",
-      },
     },
     Uid: {
       type: DataTypes.INTEGER,
@@ -103,4 +94,3 @@ Receta.init(
 );
 Receta.belongsTo(User, { foreignKey: "Uid", as: "doctor" });
 Receta.belongsTo(Paciente, { foreignKey: "numero_documento", as: "paciente" });
-Receta.belongsTo(Consulta, { foreignKey: "Cid", as: "consulta" });

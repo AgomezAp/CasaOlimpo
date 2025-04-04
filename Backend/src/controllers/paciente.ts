@@ -9,6 +9,7 @@ import fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
 import sharp from 'sharp';
 import { NextFunction } from 'express';
+import { User } from "../models/user";
 
 dotenv.config();
 
@@ -179,16 +180,26 @@ const pacientesStorage = multer.diskStorage({
 
 
 
-export const crearPaciente = async (req: Request, res: Response): Promise<any> => {
+  export const crearPaciente = async (req: Request, res: Response): Promise<any> => {
     const {nombre, apellidos, fecha_nacimiento,sexo, ciudad_nacimiento,edad,tipo_documento,numero_documento,ciudad_expedicion,ciudad_domicilio,barrio,direccion_domicilio,telefono,email,celular,ocupacion,estado_civil,eps,tipo_afiliacion,grupo_sanguineo,rh,alergias,antecedentes,antecedentes_familiares}= req.body
+    const { Uid } = req.body;
     
     try{
+        // Verificar que el doctor existe y tiene el rol correcto
+        const doctor = await User.findByPk(Uid);
+        if (!doctor || doctor.rol !== 'Doctor') {
+          return res.status(400).json({ message: 'Usuario no autorizado para crear pacientes' });
+        }
+        
+        // Verificar si el paciente ya existe
         const paciente = await Paciente.findOne({where:{numero_documento}})
         if(paciente){
             return res.status(400).json({
                 message: "El paciente ya existe"
             })
         }
+        
+        // Validar formato de fecha
         const fechaFormateada = dayjs(fecha_nacimiento, "YYYY-MM-DD", true);
         if (!fechaFormateada.isValid()) {
             return res.status(400).json({
@@ -196,12 +207,15 @@ export const crearPaciente = async (req: Request, res: Response): Promise<any> =
             });
         }
         
+        // Encriptar datos sensibles
         const direccionCifrada = encryptData(direccion_domicilio);
         const alergiasCifradas = encryptData(alergias);
         const antecedentesCifrados = encryptData(antecedentes);
         const antecedentesFamiliaresCifrados = encryptData(antecedentes_familiares);
 
+        // Crear el paciente incluyendo el Uid del doctor
         const nuevoPaciente = await Paciente.create({
+            Uid, // Aquí estaba faltando incluir el Uid
             nombre,
             apellidos,
             fecha_nacimiento: fechaFormateada.toDate(),
@@ -213,7 +227,7 @@ export const crearPaciente = async (req: Request, res: Response): Promise<any> =
             ciudad_expedicion,
             ciudad_domicilio,
             barrio,
-            direccion_domicilio:direccionCifrada,
+            direccion_domicilio: direccionCifrada,
             telefono,
             email,
             celular,
@@ -226,18 +240,25 @@ export const crearPaciente = async (req: Request, res: Response): Promise<any> =
             alergias: alergiasCifradas, 
             antecedentes: antecedentesCifrados, 
             antecedentes_familiares: antecedentesFamiliaresCifrados, 
-        })
+        });
+        
         return res.status(201).json({
             message: "Paciente registrado correctamente",
-            data: nuevoPaciente,
-          });
-        } catch (err: any) {
-          res.status(500).json({
-            message: "Error registrando al paciente ",
+            data: {
+                ...nuevoPaciente.toJSON(),
+                doctor: {
+                    Uid: doctor.Uid,
+                    nombre: doctor.nombre
+                }
+            },
+        });
+    } catch (err: any) {
+        console.error("Error registrando al paciente:", err);
+        res.status(500).json({
+            message: "Error registrando al paciente",
             error: err.message,
-          });
-        }
-    
+        });
+    }
 }
 
 export const obtenerPacientes = async (req: Request, res: Response): Promise<any> => { 
@@ -387,3 +408,80 @@ export const actualizarDatosPaciente = async (req: Request, res: Response): Prom
         });
     }
 }
+export const asignarPacienteADoctor = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const { numero_documento, Uid } = req.body;
+    
+    // Verificar que el paciente existe
+    const paciente = await Paciente.findByPk(numero_documento);
+    if (!paciente) {
+      return res.status(404).json({ message: 'Paciente no encontrado' });
+    }
+    
+    // Verificar que el doctor existe
+    const doctor = await User.findByPk(Uid);
+    if (!doctor) {
+      return res.status(404).json({ message: 'Doctor no encontrado' });
+    }
+    
+    // Verificar que el usuario es un doctor
+    if (doctor.rol !== 'DOCTOR') {
+      return res.status(400).json({ message: 'El usuario no es un doctor' });
+    }
+    
+    // Asignar el doctor al paciente
+    await paciente.update({ Uid });
+    
+    return res.status(200).json({
+      message: 'Paciente asignado correctamente al doctor',
+      data: {
+        paciente: paciente.nombre + ' ' + paciente.apellidos,
+        doctor: doctor.nombre,
+        Uid: doctor.Uid
+      }
+    });
+  } catch (error: any) {
+    console.error('Error asignando paciente a doctor:', error);
+    return res.status(500).json({
+      message: 'Error asignando paciente a doctor',
+      error: error.message
+    });
+  }
+};
+export const obtenerPacientesPorDoctor = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const { Uid } = req.params;
+    
+    // Verificar que el doctor existe
+    const doctor = await User.findByPk(Uid);
+    if (!doctor) {
+      return res.status(404).json({ message: 'Doctor no encontrado' });
+    }
+    
+    // Verificar que el usuario es un doctor
+    if (doctor.rol !== 'Doctor') {
+      return res.status(400).json({ message: 'El usuario no es un doctor' });
+    }
+    
+    // Obtener todos los pacientes asignados al doctor
+    const pacientes = await Paciente.findAll({
+      where: { Uid },
+      order: [['nombre', 'ASC'], ['apellidos', 'ASC']]
+    });
+    
+    return res.status(200).json({
+      message: 'Pacientes obtenidos correctamente',
+      data: {
+        doctor: doctor.nombre,
+        total_pacientes: pacientes.length,
+        pacientes
+      }
+    });
+  } catch (error: any) {
+    console.error('Error obteniendo pacientes por doctor:', error);
+    return res.status(500).json({
+      message: 'Error obteniendo pacientes por doctor',
+      error: error.message
+    });
+  }
+};

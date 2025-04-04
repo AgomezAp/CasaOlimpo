@@ -5,9 +5,11 @@ import {
 
 import sequelize from '../database/connection';
 import { Receta } from './receta';
+import { User } from './user';
 
 export class Paciente extends Model {
     public Pid !: number;
+    public Uid !: number;
     public nombre !: string;
     public apellidos !: string;
     public fecha_nacimiento !: Date;
@@ -15,19 +17,19 @@ export class Paciente extends Model {
     public ciudad_nacimiento !: string;
     public edad !: string;
     public tipo_documento !: 'Cedula' | 'Tarjeta de identidad' | 'Cedula de extranjeria' | 'Pasaporte';
-    public numero_documento !: string;
+    public numero_documento !: string;  
     public ciudad_expedicion !: string;
     public ciudad_domicilio !: string;
     public barrio !: string;
     public direccion_domicilio !: string;
-    public telefono !: string;
+    public telefono !: string;  
     public email !: string;
     public celular !: string;
     public ocupacion !: string;
     public estado_civil !: 'Soltero' | 'Casado' | 'Divorciado' | 'Viudo';
     public eps !: string;
     public tipo_afiliacion !: 'Contributivo' | 'Subsidiado' | 'Vinculado' | 'Particular';
-    public grupo_sanguineo !: 'A' | 'A' | 'B' | 'B' | 'AB' | 'AB' | 'O' | 'O';
+    public grupo_sanguineo !: 'A' |'B' | 'AB' |'O';
     public rh !: '+' | '-';
     public alergias !: string;
     public antecedentes !: string;
@@ -41,6 +43,14 @@ Paciente.init(
             type: DataTypes.INTEGER,
             autoIncrement: true,
             allowNull: false 
+        },
+        Uid: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            references: {
+                model: 'User',
+                key: 'Uid'
+            }
         },
         nombre: {
             type: DataTypes.STRING,
@@ -122,8 +132,9 @@ Paciente.init(
             allowNull: false
         },
         grupo_sanguineo: {
-            type: DataTypes.ENUM('A', 'A', 'B', 'B', 'AB', 'AB', 'O', 'O'),
-            allowNull: false
+            type: DataTypes.ENUM('A', 'B', 'AB', 'O'),
+            allowNull: true
+          
         },
         rh: {
             type:
@@ -156,3 +167,13 @@ Paciente.init(
 );
 
 
+Paciente.belongsTo(User, { 
+    foreignKey: 'Uid', 
+    as: 'doctor' 
+  });
+  
+  // Asociación inversa: Un doctor puede tener muchos pacientes
+  User.hasMany(Paciente, { 
+    foreignKey: 'Uid', 
+    as: 'pacientes' 
+  });
