@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.actualizarDatosPaciente = exports.obtenerPacienteId = exports.obtenerPacientes = exports.crearPaciente = exports.obtenerFotoPaciente = exports.eliminarFotoPaciente = exports.actualizarFotoPaciente = exports.uploadPacienteFoto = void 0;
+exports.obtenerPacientesPorDoctor = exports.asignarPacienteADoctor = exports.actualizarDatosPaciente = exports.obtenerPacienteId = exports.obtenerPacientes = exports.crearPaciente = exports.obtenerFotoPaciente = exports.eliminarFotoPaciente = exports.actualizarFotoPaciente = exports.uploadPacienteFoto = void 0;
 const paciente_1 = require("../models/paciente");
 const dotenv_1 = __importDefault(require("dotenv"));
 const dayjs_1 = __importDefault(require("dayjs"));
@@ -20,6 +20,7 @@ const encriptado_1 = require("./encriptado");
 const multer_1 = __importDefault(require("multer"));
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
+const user_1 = require("../models/user");
 dotenv_1.default.config();
 const pacientesStorage = multer_1.default.diskStorage({
     destination: (req, file, cb) => {
@@ -175,24 +176,35 @@ const obtenerFotoPaciente = (req, res) => __awaiter(void 0, void 0, void 0, func
 exports.obtenerFotoPaciente = obtenerFotoPaciente;
 const crearPaciente = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { nombre, apellidos, fecha_nacimiento, sexo, ciudad_nacimiento, edad, tipo_documento, numero_documento, ciudad_expedicion, ciudad_domicilio, barrio, direccion_domicilio, telefono, email, celular, ocupacion, estado_civil, eps, tipo_afiliacion, grupo_sanguineo, rh, alergias, antecedentes, antecedentes_familiares } = req.body;
+    const { Uid } = req.body;
     try {
+        // Verificar que el doctor existe y tiene el rol correcto
+        const doctor = yield user_1.User.findByPk(Uid);
+        if (!doctor || doctor.rol !== 'Doctor') {
+            return res.status(400).json({ message: 'Usuario no autorizado para crear pacientes' });
+        }
+        // Verificar si el paciente ya existe
         const paciente = yield paciente_1.Paciente.findOne({ where: { numero_documento } });
         if (paciente) {
             return res.status(400).json({
                 message: "El paciente ya existe"
             });
         }
+        // Validar formato de fecha
         const fechaFormateada = (0, dayjs_1.default)(fecha_nacimiento, "YYYY-MM-DD", true);
         if (!fechaFormateada.isValid()) {
             return res.status(400).json({
                 message: "El formato de la fecha de nacimiento es inválido. Debe ser YYYY-MM-DD.",
             });
         }
+        // Encriptar datos sensibles
         const direccionCifrada = (0, encriptado_1.encryptData)(direccion_domicilio);
         const alergiasCifradas = (0, encriptado_1.encryptData)(alergias);
         const antecedentesCifrados = (0, encriptado_1.encryptData)(antecedentes);
         const antecedentesFamiliaresCifrados = (0, encriptado_1.encryptData)(antecedentes_familiares);
+        // Crear el paciente incluyendo el Uid del doctor
         const nuevoPaciente = yield paciente_1.Paciente.create({
+            Uid, // Aquí estaba faltando incluir el Uid
             nombre,
             apellidos,
             fecha_nacimiento: fechaFormateada.toDate(),
@@ -220,12 +232,16 @@ const crearPaciente = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         });
         return res.status(201).json({
             message: "Paciente registrado correctamente",
-            data: nuevoPaciente,
+            data: Object.assign(Object.assign({}, nuevoPaciente.toJSON()), { doctor: {
+                    Uid: doctor.Uid,
+                    nombre: doctor.nombre
+                } }),
         });
     }
     catch (err) {
+        console.error("Error registrando al paciente:", err);
         res.status(500).json({
-            message: "Error registrando al paciente ",
+            message: "Error registrando al paciente",
             error: err.message,
         });
     }
@@ -375,3 +391,75 @@ const actualizarDatosPaciente = (req, res) => __awaiter(void 0, void 0, void 0, 
     }
 });
 exports.actualizarDatosPaciente = actualizarDatosPaciente;
+const asignarPacienteADoctor = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { numero_documento, Uid } = req.body;
+        // Verificar que el paciente existe
+        const paciente = yield paciente_1.Paciente.findByPk(numero_documento);
+        if (!paciente) {
+            return res.status(404).json({ message: 'Paciente no encontrado' });
+        }
+        // Verificar que el doctor existe
+        const doctor = yield user_1.User.findByPk(Uid);
+        if (!doctor) {
+            return res.status(404).json({ message: 'Doctor no encontrado' });
+        }
+        // Verificar que el usuario es un doctor
+        if (doctor.rol !== 'DOCTOR') {
+            return res.status(400).json({ message: 'El usuario no es un doctor' });
+        }
+        // Asignar el doctor al paciente
+        yield paciente.update({ Uid });
+        return res.status(200).json({
+            message: 'Paciente asignado correctamente al doctor',
+            data: {
+                paciente: paciente.nombre + ' ' + paciente.apellidos,
+                doctor: doctor.nombre,
+                Uid: doctor.Uid
+            }
+        });
+    }
+    catch (error) {
+        console.error('Error asignando paciente a doctor:', error);
+        return res.status(500).json({
+            message: 'Error asignando paciente a doctor',
+            error: error.message
+        });
+    }
+});
+exports.asignarPacienteADoctor = asignarPacienteADoctor;
+const obtenerPacientesPorDoctor = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { Uid } = req.params;
+        // Verificar que el doctor existe
+        const doctor = yield user_1.User.findByPk(Uid);
+        if (!doctor) {
+            return res.status(404).json({ message: 'Doctor no encontrado' });
+        }
+        // Verificar que el usuario es un doctor
+        if (doctor.rol !== 'Doctor') {
+            return res.status(400).json({ message: 'El usuario no es un doctor' });
+        }
+        // Obtener todos los pacientes asignados al doctor
+        const pacientes = yield paciente_1.Paciente.findAll({
+            where: { Uid },
+            order: [['nombre', 'ASC'], ['apellidos', 'ASC']]
+        });
+        return res.status(200).json({
+            message: 'Pacientes obtenidos correctamente',
+            data: {
+                doctor: doctor.nombre,
+                total_pacientes: pacientes.length,
+                pacientes
+            }
+        });
+    }
+    catch (error) {
+        console.error('Error obteniendo pacientes por doctor:', error);
+        return res.status(500).json({
+            message: 'Error obteniendo pacientes por doctor',
+            error: error.message
+        });
+    }
+});
+exports.obtenerPacientesPorDoctor = obtenerPacientesPorDoctor;

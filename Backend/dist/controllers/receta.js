@@ -14,7 +14,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.obtenerRecetasActivas = exports.completarReceta = exports.obtenerRecetasPorPaciente = exports.editarReceta = exports.crearReceta = exports.obtenerRecetas = void 0;
 const receta_1 = require("../models/receta");
-const consulta_1 = require("../models/consulta");
 const paciente_1 = require("../models/paciente");
 const dayjs_1 = __importDefault(require("dayjs"));
 const user_1 = require("../models/user");
@@ -24,14 +23,9 @@ const obtenerRecetas = (req, res) => __awaiter(void 0, void 0, void 0, function*
         const recetas = yield receta_1.Receta.findAll({
             include: [
                 {
-                    model: consulta_1.Consulta,
-                    as: 'consulta',
-                    include: [{ model: paciente_1.Paciente, as: 'paciente' }]
-                },
-                {
                     model: user_1.User,
                     as: 'doctor',
-                    attributes: ['Uid', 'nombre', 'apellido', 'especialidad']
+                    attributes: ['Uid', 'nombre', 'rol']
                 }
             ],
             order: [['fecha_emision', 'DESC']]
@@ -52,8 +46,7 @@ const obtenerRecetas = (req, res) => __awaiter(void 0, void 0, void 0, function*
 exports.obtenerRecetas = obtenerRecetas;
 const crearReceta = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const { Cid, // ID de la consulta (opcional)
-        medicamentos, instrucciones, duracion_tratamiento, diagnostico, observaciones, anotaciones, Uid // Recibir el Uid directamente del body por ahora
+        const { medicamentos, instrucciones, duracion_tratamiento, diagnostico, observaciones, anotaciones, Uid // Recibir el Uid directamente del body por ahora
          } = req.body;
         // Obtener número de documento desde los parámetros de la URL
         const { numero_documento } = req.params;
@@ -63,18 +56,6 @@ const crearReceta = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
             return res.status(404).json({ message: 'Paciente no encontrado' });
         }
         // Verificar que la consulta existe (si se proporciona)
-        if (Cid) {
-            const consulta = yield consulta_1.Consulta.findByPk(Cid);
-            if (!consulta) {
-                return res.status(404).json({ message: 'Consulta no encontrada' });
-            }
-            // Verificar que la consulta corresponde al paciente
-            if (consulta.numero_documento !== numero_documento) {
-                return res.status(400).json({
-                    message: 'La consulta proporcionada no corresponde al paciente indicado'
-                });
-            }
-        }
         // Buscar recetas activas para este paciente
         const recetasActivas = yield receta_1.Receta.findAll({
             where: {
@@ -95,7 +76,6 @@ const crearReceta = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         }
         // Crear la nueva receta con Uid temporal si no se proporciona
         const nuevaReceta = yield receta_1.Receta.create({
-            Cid,
             Uid: Uid || 1, // Usar 1 como Uid temporal si no se proporciona
             numero_documento,
             medicamentos,
@@ -189,13 +169,9 @@ const obtenerRecetasPorPaciente = (req, res) => __awaiter(void 0, void 0, void 0
             where: { numero_documento },
             include: [
                 {
-                    model: consulta_1.Consulta,
-                    as: 'consulta'
-                },
-                {
                     model: user_1.User,
                     as: 'doctor',
-                    attributes: ['Uid', 'nombre', 'apellido', 'especialidad']
+                    attributes: ['Uid', 'nombre', 'rol']
                 }
             ],
             order: [['fecha_emision', 'DESC']]
@@ -217,10 +193,10 @@ exports.obtenerRecetasPorPaciente = obtenerRecetasPorPaciente;
 // Método adicional para completar manualmente una receta
 const completarReceta = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const { recetaId } = req.params;
+        const { RecetaId } = req.params;
         const { motivo } = req.body;
         // Buscar la receta
-        const receta = yield receta_1.Receta.findByPk(recetaId);
+        const receta = yield receta_1.Receta.findByPk(RecetaId);
         if (!receta) {
             return res.status(404).json({ message: 'Receta no encontrada' });
         }
@@ -271,13 +247,9 @@ const obtenerRecetasActivas = (req, res) => __awaiter(void 0, void 0, void 0, fu
             },
             include: [
                 {
-                    model: consulta_1.Consulta,
-                    as: 'consulta'
-                },
-                {
                     model: user_1.User,
                     as: 'doctor',
-                    attributes: ['Uid', 'nombre', 'apellido', 'especialidad']
+                    attributes: ['Uid', 'nombre', 'rol']
                 }
             ],
             order: [['fecha_emision', 'DESC']]

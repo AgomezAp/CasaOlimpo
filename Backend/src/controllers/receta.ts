@@ -10,15 +10,10 @@ export const obtenerRecetas = async (req: Request, res: Response): Promise<any> 
   try {
     const recetas = await Receta.findAll({
       include: [
-        { 
-          model: Consulta, 
-          as: 'consulta',
-          include: [{ model: Paciente, as: 'paciente' }]
-        },
         {
           model: User,
           as: 'doctor',
-          attributes: ['Uid', 'nombre', 'apellido', 'especialidad']
+          attributes: ['Uid', 'nombre', 'rol']
         }
       ],
       order: [['fecha_emision', 'DESC']]
@@ -41,7 +36,6 @@ export const obtenerRecetas = async (req: Request, res: Response): Promise<any> 
 export const crearReceta = async (req: Request, res: Response): Promise<any> => {
   try {
     const { 
-      Cid, // ID de la consulta (opcional)
       medicamentos, 
       instrucciones,
       duracion_tratamiento,
@@ -61,20 +55,6 @@ export const crearReceta = async (req: Request, res: Response): Promise<any> => 
     }
     
     // Verificar que la consulta existe (si se proporciona)
-    if (Cid) {
-      const consulta = await Consulta.findByPk(Cid);
-      if (!consulta) {
-        return res.status(404).json({ message: 'Consulta no encontrada' });
-      }
-      
-      // Verificar que la consulta corresponde al paciente
-      if (consulta.numero_documento !== numero_documento) {
-        return res.status(400).json({ 
-          message: 'La consulta proporcionada no corresponde al paciente indicado' 
-        });
-      }
-    }
-    
     // Buscar recetas activas para este paciente
     const recetasActivas = await Receta.findAll({
       where: {
@@ -99,7 +79,6 @@ export const crearReceta = async (req: Request, res: Response): Promise<any> => 
     
     // Crear la nueva receta con Uid temporal si no se proporciona
     const nuevaReceta = await Receta.create({
-      Cid,
       Uid: Uid || 1, // Usar 1 como Uid temporal si no se proporciona
       numero_documento,
       medicamentos,
@@ -206,14 +185,10 @@ export const crearReceta = async (req: Request, res: Response): Promise<any> => 
       const recetas = await Receta.findAll({
         where: { numero_documento },
         include: [
-          { 
-            model: Consulta, 
-            as: 'consulta'
-          },
           {
             model: User,
             as: 'doctor',
-            attributes: ['Uid', 'nombre', 'apellido', 'especialidad']
+            attributes: ['Uid', 'nombre', 'rol']
           }
         ],
         order: [['fecha_emision', 'DESC']]
@@ -234,11 +209,11 @@ export const crearReceta = async (req: Request, res: Response): Promise<any> => 
   // Método adicional para completar manualmente una receta
   export const completarReceta = async (req: Request, res: Response): Promise<any> => {
     try {
-      const { recetaId } = req.params;
+      const { RecetaId } = req.params;
       const { motivo } = req.body;
       
       // Buscar la receta
-      const receta = await Receta.findByPk(recetaId);
+      const receta = await Receta.findByPk(RecetaId);
       
       if (!receta) {
         return res.status(404).json({ message: 'Receta no encontrada' });
@@ -295,14 +270,10 @@ export const obtenerRecetasActivas = async (req: Request, res: Response): Promis
         estado: 'ACTIVA'
       },
       include: [
-        { 
-          model: Consulta, 
-          as: 'consulta'
-        },
         {
           model: User,
           as: 'doctor',
-          attributes: ['Uid', 'nombre', 'apellido', 'especialidad']
+          attributes: ['Uid', 'nombre',  'rol']
         }
       ],
       order: [['fecha_emision', 'DESC']]

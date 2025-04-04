@@ -8,7 +8,6 @@ const sequelize_1 = require("sequelize");
 const connection_1 = __importDefault(require("../database/connection"));
 const user_1 = require("./user");
 const paciente_1 = require("./paciente");
-const consulta_1 = require("./consulta");
 class Receta extends sequelize_1.Model {
 }
 exports.Receta = Receta;
@@ -17,14 +16,6 @@ Receta.init({
         type: sequelize_1.DataTypes.INTEGER,
         autoIncrement: true,
         primaryKey: true,
-    },
-    Cid: {
-        type: sequelize_1.DataTypes.INTEGER,
-        allowNull: false,
-        references: {
-            model: "Consulta",
-            key: "Cid",
-        },
     },
     Uid: {
         type: sequelize_1.DataTypes.INTEGER,
@@ -88,4 +79,3 @@ Receta.init({
 });
 Receta.belongsTo(user_1.User, { foreignKey: "Uid", as: "doctor" });
 Receta.belongsTo(paciente_1.Paciente, { foreignKey: "numero_documento", as: "paciente" });
-Receta.belongsTo(consulta_1.Consulta, { foreignKey: "Cid", as: "consulta" });

@@ -7,6 +7,7 @@ import {
   obtenerFotoPaciente,
   obtenerPacienteId,
   obtenerPacientes,
+  obtenerPacientesPorDoctor,
   uploadPacienteFoto,
 } from "../controllers/paciente";
 
@@ -20,4 +21,5 @@ router.patch("/api/paciente/actualizar/:numero_documento", actualizarDatosPacien
 router.post("/api/paciente/:numero_documento/foto", [uploadPacienteFoto.single("foto") ], actualizarFotoPaciente);
 router.delete('/api/paciente/:numero_documento/foto',  eliminarFotoPaciente);
 router.get('/api/paciente/:numero_documento/foto',  obtenerFotoPaciente);
+router.get('/api/doctor/:Uid/pacientes', obtenerPacientesPorDoctor);
 export default router;
