@@ -14,7 +14,7 @@ Paciente.init({
     Pid: {
         type: sequelize_1.DataTypes.INTEGER,
         autoIncrement: true,
-        allowNull: false
+        allowNull: false,
     },
     Uid: {
         type: sequelize_1.DataTypes.INTEGER,
@@ -49,7 +49,7 @@ Paciente.init({
         allowNull: false
     },
     tipo_documento: {
-        type: sequelize_1.DataTypes.ENUM('Cedula', 'Tarjeta de identidad', 'Cedula de extranjeria', 'Pasaporte'),
+        type: sequelize_1.DataTypes.ENUM('Cedula', 'Tarjeta de identidad', 'Cedula de extranjeria', 'Pasaporte', 'Otro'),
         allowNull: false
     },
     numero_documento: {
@@ -90,7 +90,7 @@ Paciente.init({
         allowNull: false
     },
     estado_civil: {
-        type: sequelize_1.DataTypes.ENUM('Soltero', 'Casado', 'Divorciado', 'Viudo'),
+        type: sequelize_1.DataTypes.ENUM('Soltero', 'Casado', 'Divorciado', 'Viudo', 'Union libre'),
         allowNull: false
     },
     eps: {
@@ -110,15 +110,15 @@ Paciente.init({
         allowNull: false
     },
     alergias: {
-        type: sequelize_1.DataTypes.STRING,
+        type: sequelize_1.DataTypes.TEXT('long'),
         allowNull: false
     },
     antecedentes: {
-        type: sequelize_1.DataTypes.STRING,
+        type: sequelize_1.DataTypes.TEXT('long'),
         allowNull: false
     },
     antecedentes_familiares: {
-        type: sequelize_1.DataTypes.STRING,
+        type: sequelize_1.DataTypes.TEXT('long'),
         allowNull: false
     },
     foto_path: {

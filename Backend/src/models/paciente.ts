@@ -26,7 +26,7 @@ export class Paciente extends Model {
     public email !: string;
     public celular !: string;
     public ocupacion !: string;
-    public estado_civil !: 'Soltero' | 'Casado' | 'Divorciado' | 'Viudo';
+    public estado_civil !: 'Soltero' | 'Casado' | 'Divorciado' | 'Viudo'|'Union libre';
     public eps !: string;
     public tipo_afiliacion !: 'Contributivo' | 'Subsidiado' | 'Vinculado' | 'Particular';
     public grupo_sanguineo !: 'A' |'B' | 'AB' |'O';
@@ -42,7 +42,8 @@ Paciente.init(
         Pid: {
             type: DataTypes.INTEGER,
             autoIncrement: true,
-            allowNull: false 
+            allowNull: false,
+            
         },
         Uid: {
             type: DataTypes.INTEGER,
@@ -78,7 +79,7 @@ Paciente.init(
             allowNull: false
         },
         tipo_documento: {
-            type: DataTypes.ENUM('Cedula', 'Tarjeta de identidad', 'Cedula de extranjeria', 'Pasaporte'),
+            type: DataTypes.ENUM('Cedula', 'Tarjeta de identidad', 'Cedula de extranjeria', 'Pasaporte','Otro'),
             allowNull: false
         },
         numero_documento: {
@@ -120,7 +121,7 @@ Paciente.init(
             allowNull: false
         },
         estado_civil: {
-            type: DataTypes.ENUM('Soltero', 'Casado', 'Divorciado', 'Viudo'),
+            type: DataTypes.ENUM('Soltero', 'Casado', 'Divorciado', 'Viudo', 'Union libre'),
             allowNull: false
         },
         eps: {
@@ -142,15 +143,15 @@ Paciente.init(
             allowNull: false
         },
         alergias: {
-            type: DataTypes.STRING,
+            type: DataTypes.TEXT('long'),
             allowNull: false
         },
         antecedentes: {
-            type: DataTypes.STRING,
+            type: DataTypes.TEXT('long'),
             allowNull: false
         },
         antecedentes_familiares: {
-            type: DataTypes.STRING,
+            type: DataTypes.TEXT('long'),
             allowNull: false
         },
         foto_path: {

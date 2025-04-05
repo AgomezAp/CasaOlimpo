@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.obtenerPacientesPorDoctor = exports.asignarPacienteADoctor = exports.actualizarDatosPaciente = exports.obtenerPacienteId = exports.obtenerPacientes = exports.crearPaciente = exports.obtenerFotoPaciente = exports.eliminarFotoPaciente = exports.actualizarFotoPaciente = exports.uploadPacienteFoto = void 0;
+exports.obtenerPacientesPorDoctor = exports.actualizarDatosPaciente = exports.obtenerPacienteId = exports.obtenerPacientes = exports.crearPaciente = exports.obtenerFotoPaciente = exports.eliminarFotoPaciente = exports.actualizarFotoPaciente = exports.uploadPacienteFoto = void 0;
 const paciente_1 = require("../models/paciente");
 const dotenv_1 = __importDefault(require("dotenv"));
 const dayjs_1 = __importDefault(require("dayjs"));
@@ -158,12 +158,28 @@ const obtenerFotoPaciente = (req, res) => __awaiter(void 0, void 0, void 0, func
         if (!paciente.foto_path) {
             return res.status(404).json({ message: 'El paciente no tiene foto registrada' });
         }
-        return res.status(200).json({
-            message: 'Foto obtenida correctamente',
-            data: {
-                foto_path: paciente.foto_path
-            }
-        });
+        // Construir la ruta absoluta del archivo en el servidor
+        const rutaAbsoluta = path_1.default.join(__dirname, '../../', paciente.foto_path.replace(/^\//, ''));
+        // Verificar si el archivo existe
+        if (!fs_1.default.existsSync(rutaAbsoluta)) {
+            return res.status(404).json({
+                message: 'Archivo de imagen no encontrado en el servidor',
+                ruta: rutaAbsoluta
+            });
+        }
+        // Obtener el tipo MIME basado en la extensión
+        const extension = path_1.default.extname(rutaAbsoluta).toLowerCase();
+        let contentType = 'image/jpeg'; // Valor por defecto
+        if (extension === '.png') {
+            contentType = 'image/png';
+        }
+        else if (extension === '.jpg' || extension === '.jpeg') {
+            contentType = 'image/jpeg';
+        }
+        // Configurar los headers para la imagen
+        res.setHeader('Content-Type', contentType);
+        // Enviar el archivo directamente como respuesta
+        return res.sendFile(rutaAbsoluta);
     }
     catch (error) {
         console.error('Error obteniendo foto del paciente:', error);
@@ -391,43 +407,6 @@ const actualizarDatosPaciente = (req, res) => __awaiter(void 0, void 0, void 0, 
     }
 });
 exports.actualizarDatosPaciente = actualizarDatosPaciente;
-const asignarPacienteADoctor = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        const { numero_documento, Uid } = req.body;
-        // Verificar que el paciente existe
-        const paciente = yield paciente_1.Paciente.findByPk(numero_documento);
-        if (!paciente) {
-            return res.status(404).json({ message: 'Paciente no encontrado' });
-        }
-        // Verificar que el doctor existe
-        const doctor = yield user_1.User.findByPk(Uid);
-        if (!doctor) {
-            return res.status(404).json({ message: 'Doctor no encontrado' });
-        }
-        // Verificar que el usuario es un doctor
-        if (doctor.rol !== 'DOCTOR') {
-            return res.status(400).json({ message: 'El usuario no es un doctor' });
-        }
-        // Asignar el doctor al paciente
-        yield paciente.update({ Uid });
-        return res.status(200).json({
-            message: 'Paciente asignado correctamente al doctor',
-            data: {
-                paciente: paciente.nombre + ' ' + paciente.apellidos,
-                doctor: doctor.nombre,
-                Uid: doctor.Uid
-            }
-        });
-    }
-    catch (error) {
-        console.error('Error asignando paciente a doctor:', error);
-        return res.status(500).json({
-            message: 'Error asignando paciente a doctor',
-            error: error.message
-        });
-    }
-});
-exports.asignarPacienteADoctor = asignarPacienteADoctor;
 const obtenerPacientesPorDoctor = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { Uid } = req.params;

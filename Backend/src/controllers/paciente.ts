@@ -160,12 +160,33 @@ const pacientesStorage = multer.diskStorage({
         return res.status(404).json({ message: 'El paciente no tiene foto registrada' });
       }
       
-      return res.status(200).json({
-        message: 'Foto obtenida correctamente',
-        data: {
-          foto_path: paciente.foto_path
-        }
-      });
+      // Construir la ruta absoluta del archivo en el servidor
+      const rutaAbsoluta = path.join(__dirname, '../../', paciente.foto_path.replace(/^\//, ''));
+      
+      // Verificar si el archivo existe
+      if (!fs.existsSync(rutaAbsoluta)) {
+        return res.status(404).json({ 
+          message: 'Archivo de imagen no encontrado en el servidor',
+          ruta: rutaAbsoluta 
+        });
+      }
+      
+      // Obtener el tipo MIME basado en la extensión
+      const extension = path.extname(rutaAbsoluta).toLowerCase();
+      let contentType = 'image/jpeg'; // Valor por defecto
+      
+      if (extension === '.png') {
+        contentType = 'image/png';
+      } else if (extension === '.jpg' || extension === '.jpeg') {
+        contentType = 'image/jpeg';
+      }
+      
+      // Configurar los headers para la imagen
+      res.setHeader('Content-Type', contentType);
+      
+      // Enviar el archivo directamente como respuesta
+      return res.sendFile(rutaAbsoluta);
+      
     } catch (error: any) {
       console.error('Error obteniendo foto del paciente:', error);
       return res.status(500).json({
@@ -174,8 +195,6 @@ const pacientesStorage = multer.diskStorage({
       });
     }
   };
-
-
 
 
 
@@ -408,46 +427,6 @@ export const actualizarDatosPaciente = async (req: Request, res: Response): Prom
         });
     }
 }
-export const asignarPacienteADoctor = async (req: Request, res: Response): Promise<any> => {
-  try {
-    const { numero_documento, Uid } = req.body;
-    
-    // Verificar que el paciente existe
-    const paciente = await Paciente.findByPk(numero_documento);
-    if (!paciente) {
-      return res.status(404).json({ message: 'Paciente no encontrado' });
-    }
-    
-    // Verificar que el doctor existe
-    const doctor = await User.findByPk(Uid);
-    if (!doctor) {
-      return res.status(404).json({ message: 'Doctor no encontrado' });
-    }
-    
-    // Verificar que el usuario es un doctor
-    if (doctor.rol !== 'DOCTOR') {
-      return res.status(400).json({ message: 'El usuario no es un doctor' });
-    }
-    
-    // Asignar el doctor al paciente
-    await paciente.update({ Uid });
-    
-    return res.status(200).json({
-      message: 'Paciente asignado correctamente al doctor',
-      data: {
-        paciente: paciente.nombre + ' ' + paciente.apellidos,
-        doctor: doctor.nombre,
-        Uid: doctor.Uid
-      }
-    });
-  } catch (error: any) {
-    console.error('Error asignando paciente a doctor:', error);
-    return res.status(500).json({
-      message: 'Error asignando paciente a doctor',
-      error: error.message
-    });
-  }
-};
 export const obtenerPacientesPorDoctor = async (req: Request, res: Response): Promise<any> => {
   try {
     const { Uid } = req.params;
