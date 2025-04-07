@@ -74,16 +74,16 @@ class Server{
             /* {force: true}{alter: true} */
             await sequelize.authenticate();
         // Primer nivel: tablas independientes
-        await User.sync({alter: true});
-        await Paciente.sync({alter: true});
+        await User.sync();
+        await Paciente.sync();
         
         // Segundo nivel: tablas con dependencias simples
-        await Consulta.sync({alter: true});
-        await RedFamiliar.sync({alter: true});
+        await Consulta.sync();
+        await RedFamiliar.sync();
         
         // Tercer nivel: tablas que dependen del segundo nivel
-        await Carpeta.sync({alter: true});
-        await Agenda.sync({alter: true});
+        await Carpeta.sync();
+        await Agenda.sync();
         await AgendaNoRegistrados.sync();
         
         // Cuarto nivel: tablas con dependencias complejas

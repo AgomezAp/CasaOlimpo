@@ -116,14 +116,14 @@ class Server {
                 /* {force: true}{alter: true} */
                 yield connection_1.default.authenticate();
                 // Primer nivel: tablas independientes
-                yield user_2.User.sync({ alter: true });
-                yield paciente_2.Paciente.sync({ alter: true });
+                yield user_2.User.sync();
+                yield paciente_2.Paciente.sync();
                 // Segundo nivel: tablas con dependencias simples
-                yield consulta_2.Consulta.sync({ alter: true });
-                yield redfamiliar_2.RedFamiliar.sync({ alter: true });
+                yield consulta_2.Consulta.sync();
+                yield redfamiliar_2.RedFamiliar.sync();
                 // Tercer nivel: tablas que dependen del segundo nivel
-                yield carpeta_2.Carpeta.sync({ alter: true });
-                yield agenda_2.Agenda.sync({ alter: true });
+                yield carpeta_2.Carpeta.sync();
+                yield agenda_2.Agenda.sync();
                 yield agendaNoRegistrados_2.AgendaNoRegistrados.sync();
                 // Cuarto nivel: tablas con dependencias complejas
                 yield receta_2.Receta.sync();

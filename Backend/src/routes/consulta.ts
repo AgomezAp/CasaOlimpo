@@ -1,9 +1,13 @@
 import { Router } from 'express';
-import {updateConsulta, nuevaConsulta, getConsulta} from '../controllers/consulta'
+import {updateConsulta, nuevaConsulta, getConsulta, getConsultasPorPaciente, getConsultasDoctor, cerrarConsulta, uploadConsentimiento} from '../controllers/consulta'
 const router = Router();
+// Rutas centradas en el paciente
+router.post('/api/paciente/:numero_documento/consulta', uploadConsentimiento, nuevaConsulta);
+router.get('/api/paciente/:numero_documento/consultas', getConsultasPorPaciente);
+router.put('/api/paciente/:numero_documento/consulta/:Cid', updateConsulta);
+router.patch('/api/paciente/:numero_documento/consulta/:Cid/cerrar', cerrarConsulta);
 
-router.post("/api/consulta/crear", nuevaConsulta);
-router.get("/api/consulta/obtener", getConsulta);
-router.put("/api/consulta/update/:Cid",updateConsulta)
+// Ruta para consultas del doctor
+router.get('/api/doctor/:Uid/consultas', getConsultasDoctor);
 
 export default router;

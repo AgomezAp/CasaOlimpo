@@ -8,6 +8,7 @@ import { User } from './user';
 import { Paciente } from './paciente';
 
 export class Consulta extends Model {
+    public Uid!: number;
     public Cid!: number;
     public motivo!: string;
     public enfermedad_actual!: string;
@@ -22,56 +23,64 @@ export class Consulta extends Model {
     public numero_documento!: string;
     public fecha!: Date;
     public correo!: string;
-    public consentimiento_info !: Buffer;
+    public consentimiento_info !: Blob;
     public consentimiento_check !: boolean;
     public abierto !: boolean;
 }
 
 Consulta.init(
     {
+        Uid: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            references: {
+                model: 'User',
+                key: 'Uid'
+            }
+        },
         Cid: {
             type: DataTypes.INTEGER,
             autoIncrement: true,
             primaryKey: true
         },
         motivo: {
-            type: DataTypes.STRING,
+            type: DataTypes.TEXT('medium'),
             allowNull: false
         },
         enfermedad_actual: {
-            type: DataTypes.STRING,
+            type: DataTypes.TEXT('medium'),
             allowNull: false
         },
         objetivos_terapia: {
-            type: DataTypes.STRING,
+            type: DataTypes.TEXT('medium'),
             allowNull: false
         },
         historia_problema: {
-            type: DataTypes.STRING,
+            type: DataTypes.TEXT('medium'),
             allowNull: false
         },
         desarrollo: {
-            type: DataTypes.STRING,
+            type: DataTypes.TEXT('medium'),
             allowNull: false
         },
         plan_terapeutico: {
-            type: DataTypes.STRING,
+            type: DataTypes.TEXT('medium'),
             allowNull: false
         },
         tipo_diagnostico: {
-            type: DataTypes.STRING,
+            type: DataTypes.TEXT('medium'),
             allowNull: false
         },
         analisis_diagnostico: {
-            type: DataTypes.STRING,
+            type: DataTypes.TEXT('medium'),
             allowNull: false
         },
         plan_tratamiento: {
-            type: DataTypes.STRING,
+            type: DataTypes.TEXT('medium'),
             allowNull: false
         },
         recomendaciones: {
-            type: DataTypes.STRING,
+            type: DataTypes.TEXT('medium'),
             allowNull: false
         },
         numero_documento: {

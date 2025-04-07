@@ -12,49 +12,57 @@ class Consulta extends sequelize_1.Model {
 }
 exports.Consulta = Consulta;
 Consulta.init({
+    Uid: {
+        type: sequelize_1.DataTypes.INTEGER,
+        allowNull: false,
+        references: {
+            model: 'User',
+            key: 'Uid'
+        }
+    },
     Cid: {
         type: sequelize_1.DataTypes.INTEGER,
         autoIncrement: true,
         primaryKey: true
     },
     motivo: {
-        type: sequelize_1.DataTypes.STRING,
+        type: sequelize_1.DataTypes.TEXT('medium'),
         allowNull: false
     },
     enfermedad_actual: {
-        type: sequelize_1.DataTypes.STRING,
+        type: sequelize_1.DataTypes.TEXT('medium'),
         allowNull: false
     },
     objetivos_terapia: {
-        type: sequelize_1.DataTypes.STRING,
+        type: sequelize_1.DataTypes.TEXT('medium'),
         allowNull: false
     },
     historia_problema: {
-        type: sequelize_1.DataTypes.STRING,
+        type: sequelize_1.DataTypes.TEXT('medium'),
         allowNull: false
     },
     desarrollo: {
-        type: sequelize_1.DataTypes.STRING,
+        type: sequelize_1.DataTypes.TEXT('medium'),
         allowNull: false
     },
     plan_terapeutico: {
-        type: sequelize_1.DataTypes.STRING,
+        type: sequelize_1.DataTypes.TEXT('medium'),
         allowNull: false
     },
     tipo_diagnostico: {
-        type: sequelize_1.DataTypes.STRING,
+        type: sequelize_1.DataTypes.TEXT('medium'),
         allowNull: false
     },
     analisis_diagnostico: {
-        type: sequelize_1.DataTypes.STRING,
+        type: sequelize_1.DataTypes.TEXT('medium'),
         allowNull: false
     },
     plan_tratamiento: {
-        type: sequelize_1.DataTypes.STRING,
+        type: sequelize_1.DataTypes.TEXT('medium'),
         allowNull: false
     },
     recomendaciones: {
-        type: sequelize_1.DataTypes.STRING,
+        type: sequelize_1.DataTypes.TEXT('medium'),
         allowNull: false
     },
     numero_documento: {
