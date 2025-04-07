@@ -64,9 +64,9 @@ export const obtenerFecha = async (req: Request, res: Response): Promise<any> =>
         });
 
         if (clienteConMismaFecha.length > 0) {
-            return res.status(200).json({ dia: diaSemana, pacientes: clienteConMismaFecha });
+            return res.status(200).json({pacientes: clienteConMismaFecha });
         }
-        return res.status(200).json({ dia: diaSemana, message: 'No hay pacientes cumpliendo años hoy.' });
+        return res.status(200).json({message: 'No hay pacientes cumpliendo años hoy.' });
     } catch (error) {
         console.error('Error al obtener la fecha:', error);
         return res.status(500).json({ error: 'Error interno del servidor.' });
