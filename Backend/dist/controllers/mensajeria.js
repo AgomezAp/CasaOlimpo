@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.programarEnvio = exports.obtenerFecha = exports.enviarMensaje = void 0;
+exports.obtenerMensaje = exports.programarEnvio = exports.obtenerFecha = exports.enviarMensaje = void 0;
 const paciente_1 = require("../models/paciente");
 const sequelize_1 = require("sequelize");
 const node_schedule_1 = __importDefault(require("node-schedule"));
@@ -116,3 +116,15 @@ const programarEnvio = (req, res) => __awaiter(void 0, void 0, void 0, function*
     }
 });
 exports.programarEnvio = programarEnvio;
+const obtenerMensaje = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { mensaje, hora } = req.body;
+        console.log({ mensaje, hora });
+        return res.status(200).json({ mensaje, hora });
+    }
+    catch (error) {
+        console.error('Error al programar la tarea:', error);
+        return res.status(500).json({ error: 'Error interno del servidor.' });
+    }
+});
+exports.obtenerMensaje = obtenerMensaje;

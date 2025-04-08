@@ -103,3 +103,14 @@ export const programarEnvio = async (req: Request, res: Response): Promise<Respo
             return res.status(500).json({ error: 'Error interno del servidor.' });
         }
     };
+
+export const obtenerMensaje = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { mensaje, hora } = req.body;
+        console.log({mensaje, hora})
+        return res.status(200).json({mensaje, hora})
+    } catch (error) {
+        console.error('Error al programar la tarea:', error);
+        return res.status(500).json({ error: 'Error interno del servidor.' });
+    }
+}
