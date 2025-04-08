@@ -102,7 +102,23 @@ Consulta.init({
     tableName: "Consulta",
     timestamps: false,
 });
-Consulta.belongsTo(user_1.User, { foreignKey: 'correo', as: 'User' });
-user_1.User.hasMany(Consulta, { foreignKey: 'correo', as: 'Consulta' });
-Consulta.belongsTo(paciente_1.Paciente, { foreignKey: 'numero_documento', as: 'paciente' });
-paciente_1.Paciente.hasMany(Consulta, { foreignKey: 'numero_documento', as: 'Consulta' });
+Consulta.belongsTo(user_1.User, {
+    foreignKey: 'Uid', // This is the column in Consulta that references User
+    targetKey: 'Uid', // This is the column in User that is being referenced
+    as: 'doctor' // This is the alias for the relationship
+});
+// Define the relationship between Consulta and Paciente
+Consulta.belongsTo(paciente_1.Paciente, {
+    foreignKey: 'numero_documento', // This is the column in Consulta that references Paciente
+    targetKey: 'numero_documento', // This is the column in Paciente that is being referenced
+    as: 'paciente' // This is the alias for the relationship
+});
+// Define the reverse relationships
+user_1.User.hasMany(Consulta, {
+    foreignKey: 'Uid',
+    as: 'consultas'
+});
+paciente_1.Paciente.hasMany(Consulta, {
+    foreignKey: 'numero_documento',
+    as: 'consultas'
+});

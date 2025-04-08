@@ -78,7 +78,7 @@ class Server{
         await Paciente.sync();
         
         // Segundo nivel: tablas con dependencias simples
-        await Consulta.sync();
+        await Consulta.sync({alter: true});
         await RedFamiliar.sync();
         
         // Tercer nivel: tablas que dependen del segundo nivel

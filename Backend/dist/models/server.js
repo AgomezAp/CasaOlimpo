@@ -119,7 +119,7 @@ class Server {
                 yield user_2.User.sync();
                 yield paciente_2.Paciente.sync();
                 // Segundo nivel: tablas con dependencias simples
-                yield consulta_2.Consulta.sync();
+                yield consulta_2.Consulta.sync({ alter: true });
                 yield redfamiliar_2.RedFamiliar.sync();
                 // Tercer nivel: tablas que dependen del segundo nivel
                 yield carpeta_2.Carpeta.sync();

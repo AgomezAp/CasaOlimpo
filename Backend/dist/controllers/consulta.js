@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.cerrarConsulta = exports.getConsultasDoctor = exports.getConsultasPorPaciente = exports.updateConsulta = exports.getConsulta = exports.nuevaConsulta = exports.uploadConsentimiento = void 0;
+exports.getConsulta = exports.getConsentimientoPDF = exports.cerrarConsulta = exports.getConsultasDoctor = exports.getConsultasPorPaciente = exports.updateConsulta = exports.nuevaConsulta = exports.uploadConsentimiento = void 0;
 const consulta_1 = require("../models/consulta");
 const paciente_1 = require("../models/paciente");
 const user_1 = require("../models/user");
@@ -114,49 +114,6 @@ const nuevaConsulta = (req, res) => __awaiter(void 0, void 0, void 0, function* 
     }
 });
 exports.nuevaConsulta = nuevaConsulta;
-const getConsulta = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        const { Cid } = req.params; // Usar params en lugar de body
-        if (!Cid) {
-            return res.status(400).json({
-                message: "Se requiere ID de consulta"
-            });
-        }
-        const consulta = yield consulta_1.Consulta.findByPk(Cid, {
-            include: [
-                {
-                    model: user_1.User,
-                    as: 'User',
-                    attributes: ['Uid', 'nombre', 'rol']
-                },
-                {
-                    model: paciente_1.Paciente,
-                    as: 'paciente',
-                    attributes: ['numero_documento', 'nombre', 'apellidos']
-                }
-            ]
-        });
-        if (!consulta) {
-            return res.status(404).json({
-                message: 'Consulta no encontrada',
-                Cid
-            });
-        }
-        return res.status(200).json({
-            message: "Consulta obtenida correctamente",
-            data: consulta
-        });
-    }
-    catch (error) {
-        console.error('Error al obtener la consulta:', error);
-        const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
-        return res.status(500).json({
-            message: 'Error interno del servidor al obtener consulta',
-            error: errorMessage
-        });
-    }
-});
-exports.getConsulta = getConsulta;
 const updateConsulta = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { Cid } = req.params;
@@ -166,8 +123,15 @@ const updateConsulta = (req, res) => __awaiter(void 0, void 0, void 0, function*
                 message: "ID de la consulta no proporcionado"
             });
         }
+        // Asegurarnos que Cid es un número
+        const consultaId = parseInt(Cid, 10);
+        if (isNaN(consultaId)) {
+            return res.status(400).json({
+                message: "ID de consulta debe ser un número válido"
+            });
+        }
         // Buscar la consulta existente
-        const consulta = yield consulta_1.Consulta.findByPk(Cid);
+        const consulta = yield consulta_1.Consulta.findByPk(consultaId);
         if (!consulta) {
             return res.status(404).json({
                 message: "Consulta no encontrada",
@@ -184,25 +148,29 @@ const updateConsulta = (req, res) => __awaiter(void 0, void 0, void 0, function*
         updatedData.ultima_actualizacion = new Date();
         // Actualizar solo los campos proporcionados
         yield consulta.update(updatedData);
-        // Obtener la consulta actualizada con sus relaciones
-        const consultaActualizada = yield consulta_1.Consulta.findByPk(Cid, {
-            include: [
-                {
-                    model: user_1.User,
-                    as: 'User',
-                    attributes: ['Uid', 'nombre', 'rol']
-                },
-                {
-                    model: paciente_1.Paciente,
-                    as: 'paciente',
-                    attributes: ['numero_documento', 'nombre', 'apellidos']
-                }
-            ]
+        // CAMBIO AQUÍ: Obtener la consulta actualizada sin relaciones primero
+        const consultaActualizada = yield consulta_1.Consulta.findByPk(consultaId, {
+            attributes: { exclude: ['consentimiento_info'] }
         });
+        if (!consultaActualizada) {
+            return res.status(404).json({
+                message: "Error al obtener la consulta actualizada"
+            });
+        }
+        // Buscar el doctor usando el Uid de la consulta
+        const doctor = yield user_1.User.findByPk(consultaActualizada.Uid, {
+            attributes: ['Uid', 'nombre', 'rol', 'correo']
+        });
+        // Buscar el paciente usando el numero_documento de la consulta
+        const paciente = yield paciente_1.Paciente.findByPk(consultaActualizada.numero_documento, {
+            attributes: ['numero_documento', 'nombre', 'apellidos']
+        });
+        // Construir manualmente el resultado
+        const resultado = Object.assign(Object.assign({}, consultaActualizada.toJSON()), { tiene_consentimiento: consultaActualizada.consentimiento_check || false, doctor: doctor ? doctor.toJSON() : null, paciente: paciente ? paciente.toJSON() : null });
         // Responder con éxito
         return res.status(200).json({
             message: "Consulta actualizada correctamente",
-            data: consultaActualizada
+            data: resultado
         });
     }
     catch (error) {
@@ -228,16 +196,15 @@ const getConsultasPorPaciente = (req, res) => __awaiter(void 0, void 0, void 0, 
         // Paso 1: Obtener solo las consultas sin incluir el usuario
         const consultas = yield consulta_1.Consulta.findAll({
             where: { numero_documento },
+            attributes: { exclude: ['consentimiento_info'] }, // Excluir el PDF
             order: [['fecha', 'DESC']]
         });
-        // Paso 2: Para cada consulta, buscar manualmente la información del doctor
+        // Resto del código sin cambios...
         const resultado = [];
         for (const consulta of consultas) {
-            // Obtener los datos del doctor usando el Uid de la consulta
             const doctor = yield user_1.User.findByPk(consulta.Uid, {
                 attributes: ['Uid', 'nombre', 'rol']
             });
-            // Combinar la consulta con los datos del doctor
             resultado.push(Object.assign(Object.assign({}, consulta.toJSON()), { doctor: doctor ? doctor.toJSON() : null }));
         }
         return res.status(200).json({
@@ -273,6 +240,7 @@ const getConsultasDoctor = (req, res) => __awaiter(void 0, void 0, void 0, funct
         }
         const consultas = yield consulta_1.Consulta.findAll({
             where: { Uid },
+            attributes: { exclude: ['consentimiento_info'] }, // Excluir el PDF
             include: [
                 {
                     model: paciente_1.Paciente,
@@ -282,6 +250,7 @@ const getConsultasDoctor = (req, res) => __awaiter(void 0, void 0, void 0, funct
             ],
             order: [['fecha', 'DESC']]
         });
+        // Resto del código sin cambios...
         return res.status(200).json({
             message: "Consultas obtenidas correctamente",
             total: consultas.length,
@@ -343,3 +312,87 @@ const cerrarConsulta = (req, res) => __awaiter(void 0, void 0, void 0, function*
     }
 });
 exports.cerrarConsulta = cerrarConsulta;
+const getConsentimientoPDF = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { Cid } = req.params;
+        if (!Cid) {
+            return res.status(400).json({
+                message: "Se requiere ID de consulta"
+            });
+        }
+        // Buscar la consulta pero solo obtener el campo consentimiento_info
+        const consulta = yield consulta_1.Consulta.findByPk(Cid, {
+            attributes: ['consentimiento_info', 'consentimiento_check']
+        });
+        if (!consulta) {
+            return res.status(404).json({
+                message: 'Consulta no encontrada',
+                Cid
+            });
+        }
+        // Verificar si existe el PDF
+        if (!consulta.consentimiento_info || !consulta.consentimiento_check) {
+            return res.status(404).json({
+                message: 'Esta consulta no tiene un documento de consentimiento'
+            });
+        }
+        // Enviar el PDF como respuesta
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename=consentimiento_${Cid}.pdf`);
+        return res.send(consulta.consentimiento_info);
+    }
+    catch (error) {
+        console.error('Error al obtener el PDF de consentimiento:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+        return res.status(500).json({
+            message: 'Error interno del servidor al obtener el documento',
+            error: errorMessage
+        });
+    }
+});
+exports.getConsentimientoPDF = getConsentimientoPDF;
+const getConsulta = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { Cid } = req.params;
+        // Asegurarnos que Cid es un número
+        const consultaId = parseInt(Cid, 10);
+        if (isNaN(consultaId)) {
+            return res.status(400).json({
+                message: "ID de consulta debe ser un número válido"
+            });
+        }
+        // Primero, obtener la consulta básica sin relaciones problemáticas
+        const consulta = yield consulta_1.Consulta.findByPk(consultaId, {
+            attributes: { exclude: ['consentimiento_info'] } // Excluir el PDF
+        });
+        if (!consulta) {
+            return res.status(404).json({
+                message: "Consulta no encontrada",
+                Cid
+            });
+        }
+        // Buscar el doctor usando el Uid de la consulta
+        const doctor = yield user_1.User.findByPk(consulta.Uid, {
+            attributes: ['Uid', 'nombre', 'rol', 'correo']
+        });
+        // Buscar el paciente usando el numero_documento de la consulta
+        const paciente = yield paciente_1.Paciente.findByPk(consulta.numero_documento, {
+            attributes: ['numero_documento', 'nombre', 'apellidos']
+        });
+        // Construir manualmente el resultado
+        const resultado = Object.assign(Object.assign({}, consulta.toJSON()), { tiene_consentimiento: consulta.consentimiento_check || false, doctor: doctor ? doctor.toJSON() : null, paciente: paciente ? paciente.toJSON() : null });
+        return res.status(200).json({
+            message: "Consulta obtenida correctamente",
+            data: resultado
+        });
+    }
+    catch (error) {
+        console.error('Error al obtener consulta:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+        return res.status(500).json({
+            message: 'Error interno del servidor al obtener consulta',
+            error: errorMessage
+        });
+    }
+});
+exports.getConsulta = getConsulta;

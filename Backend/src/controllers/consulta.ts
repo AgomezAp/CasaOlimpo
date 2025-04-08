@@ -122,51 +122,7 @@ export const nuevaConsulta = async (req: Request, res: Response): Promise<any> =
         });
     }
 };
-export const getConsulta = async (req: Request, res: Response): Promise<any> => {
-    try {
-        const { Cid } = req.params; // Usar params en lugar de body
-        
-        if (!Cid) {
-            return res.status(400).json({
-                message: "Se requiere ID de consulta"
-            });
-        }
 
-        const consulta = await Consulta.findByPk(Cid, {
-            include: [
-                {
-                    model: User,
-                    as: 'User',
-                    attributes: ['Uid', 'nombre', 'rol'] 
-                },
-                {
-                    model: Paciente,
-                    as: 'paciente',
-                    attributes: ['numero_documento', 'nombre', 'apellidos'] 
-                }
-            ]
-        });
-
-        if (!consulta) {
-            return res.status(404).json({
-                message: 'Consulta no encontrada',
-                Cid
-            });
-        }
-
-        return res.status(200).json({
-            message: "Consulta obtenida correctamente",
-            data: consulta
-        });
-    } catch (error) {
-        console.error('Error al obtener la consulta:', error);
-        const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
-        return res.status(500).json({ 
-            message: 'Error interno del servidor al obtener consulta',
-            error: errorMessage 
-        });
-    }
-}
 export const updateConsulta = async (req: Request, res: Response): Promise<any> => {
     try {
         const { Cid } = req.params;
@@ -178,8 +134,17 @@ export const updateConsulta = async (req: Request, res: Response): Promise<any> 
             });
         }
 
+        // Asegurarnos que Cid es un número
+        const consultaId = parseInt(Cid, 10);
+        
+        if (isNaN(consultaId)) {
+            return res.status(400).json({
+                message: "ID de consulta debe ser un número válido"
+            });
+        }
+
         // Buscar la consulta existente
-        const consulta = await Consulta.findByPk(Cid);
+        const consulta = await Consulta.findByPk(consultaId);
         
         if (!consulta) {
             return res.status(404).json({ 
@@ -201,26 +166,39 @@ export const updateConsulta = async (req: Request, res: Response): Promise<any> 
         // Actualizar solo los campos proporcionados
         await consulta.update(updatedData);
 
-        // Obtener la consulta actualizada con sus relaciones
-        const consultaActualizada = await Consulta.findByPk(Cid, {
-            include: [
-                {
-                    model: User,
-                    as: 'User',
-                    attributes: ['Uid', 'nombre', 'rol']
-                },
-                {
-                    model: Paciente,
-                    as: 'paciente',
-                    attributes: ['numero_documento', 'nombre', 'apellidos']
-                }
-            ]
+        // CAMBIO AQUÍ: Obtener la consulta actualizada sin relaciones primero
+        const consultaActualizada = await Consulta.findByPk(consultaId, {
+            attributes: { exclude: ['consentimiento_info'] }
         });
+
+        if (!consultaActualizada) {
+            return res.status(404).json({
+                message: "Error al obtener la consulta actualizada"
+            });
+        }
+
+        // Buscar el doctor usando el Uid de la consulta
+        const doctor = await User.findByPk(consultaActualizada.Uid, {
+            attributes: ['Uid', 'nombre', 'rol', 'correo']
+        });
+
+        // Buscar el paciente usando el numero_documento de la consulta
+        const paciente = await Paciente.findByPk(consultaActualizada.numero_documento, {
+            attributes: ['numero_documento', 'nombre', 'apellidos']
+        });
+
+        // Construir manualmente el resultado
+        const resultado = {
+            ...consultaActualizada.toJSON(),
+            tiene_consentimiento: consultaActualizada.consentimiento_check || false,
+            doctor: doctor ? doctor.toJSON() : null,
+            paciente: paciente ? paciente.toJSON() : null
+        };
 
         // Responder con éxito
         return res.status(200).json({
             message: "Consulta actualizada correctamente",
-            data: consultaActualizada
+            data: resultado
         });
         
     } catch (error) {
@@ -247,19 +225,18 @@ export const getConsultasPorPaciente = async (req: Request, res: Response): Prom
         // Paso 1: Obtener solo las consultas sin incluir el usuario
         const consultas = await Consulta.findAll({
             where: { numero_documento },
+            attributes: { exclude: ['consentimiento_info'] }, // Excluir el PDF
             order: [['fecha', 'DESC']]
         });
 
-        // Paso 2: Para cada consulta, buscar manualmente la información del doctor
+        // Resto del código sin cambios...
         const resultado = [];
         
         for (const consulta of consultas) {
-            // Obtener los datos del doctor usando el Uid de la consulta
             const doctor = await User.findByPk(consulta.Uid, {
                 attributes: ['Uid', 'nombre', 'rol']
             });
             
-            // Combinar la consulta con los datos del doctor
             resultado.push({
                 ...consulta.toJSON(),
                 doctor: doctor ? doctor.toJSON() : null
@@ -281,6 +258,7 @@ export const getConsultasPorPaciente = async (req: Request, res: Response): Prom
         });
     }
 };
+
 export const getConsultasDoctor = async (req: Request, res: Response): Promise<any> => {
     try {
         const { Uid } = req.params;
@@ -301,6 +279,7 @@ export const getConsultasDoctor = async (req: Request, res: Response): Promise<a
 
         const consultas = await Consulta.findAll({
             where: { Uid },
+            attributes: { exclude: ['consentimiento_info'] }, // Excluir el PDF
             include: [
                 {
                     model: Paciente,
@@ -311,6 +290,7 @@ export const getConsultasDoctor = async (req: Request, res: Response): Promise<a
             order: [['fecha', 'DESC']]
         });
 
+        // Resto del código sin cambios...
         return res.status(200).json({
             message: "Consultas obtenidas correctamente",
             total: consultas.length,
@@ -374,3 +354,102 @@ export const cerrarConsulta = async (req: Request, res: Response): Promise<any> 
         });
     }
 }
+export const getConsentimientoPDF = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { Cid } = req.params;
+        
+        if (!Cid) {
+            return res.status(400).json({
+                message: "Se requiere ID de consulta"
+            });
+        }
+
+        // Buscar la consulta pero solo obtener el campo consentimiento_info
+        const consulta = await Consulta.findByPk(Cid, {
+            attributes: ['consentimiento_info', 'consentimiento_check']
+        });
+
+        if (!consulta) {
+            return res.status(404).json({
+                message: 'Consulta no encontrada',
+                Cid
+            });
+        }
+
+        // Verificar si existe el PDF
+        if (!consulta.consentimiento_info || !consulta.consentimiento_check) {
+            return res.status(404).json({
+                message: 'Esta consulta no tiene un documento de consentimiento'
+            });
+        }
+
+        // Enviar el PDF como respuesta
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename=consentimiento_${Cid}.pdf`);
+        return res.send(consulta.consentimiento_info);
+
+    } catch (error) {
+        console.error('Error al obtener el PDF de consentimiento:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+        return res.status(500).json({ 
+            message: 'Error interno del servidor al obtener el documento',
+            error: errorMessage 
+        });
+    }
+}
+export const getConsulta = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { Cid } = req.params;
+        
+        // Asegurarnos que Cid es un número
+        const consultaId = parseInt(Cid, 10);
+        
+        if (isNaN(consultaId)) {
+            return res.status(400).json({
+                message: "ID de consulta debe ser un número válido"
+            });
+        }
+
+        // Primero, obtener la consulta básica sin relaciones problemáticas
+        const consulta = await Consulta.findByPk(consultaId, {
+            attributes: { exclude: ['consentimiento_info'] } // Excluir el PDF
+        });
+
+        if (!consulta) {
+            return res.status(404).json({
+                message: "Consulta no encontrada",
+                Cid
+            });
+        }
+
+        // Buscar el doctor usando el Uid de la consulta
+        const doctor = await User.findByPk(consulta.Uid, {
+            attributes: ['Uid', 'nombre', 'rol', 'correo']
+        });
+
+        // Buscar el paciente usando el numero_documento de la consulta
+        const paciente = await Paciente.findByPk(consulta.numero_documento, {
+            attributes: ['numero_documento', 'nombre', 'apellidos']
+        });
+
+        // Construir manualmente el resultado
+        const resultado = {
+            ...consulta.toJSON(),
+            tiene_consentimiento: consulta.consentimiento_check || false,
+            doctor: doctor ? doctor.toJSON() : null,
+            paciente: paciente ? paciente.toJSON() : null
+        };
+
+        return res.status(200).json({
+            message: "Consulta obtenida correctamente",
+            data: resultado
+        });
+    } catch (error) {
+        console.error('Error al obtener consulta:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+        return res.status(500).json({ 
+            message: 'Error interno del servidor al obtener consulta',
+            error: errorMessage 
+        });
+    }
+};
