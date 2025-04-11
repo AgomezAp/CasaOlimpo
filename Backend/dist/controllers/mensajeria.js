@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.obtenerMensaje = exports.programarEnvio = exports.obtenerFecha = exports.enviarMensaje = void 0;
+exports.mensajeToFront = exports.obtenerMensaje = exports.programarEnvio = exports.obtenerFecha = exports.enviarMensaje = void 0;
 const paciente_1 = require("../models/paciente");
 const sequelize_1 = require("sequelize");
 const node_schedule_1 = __importDefault(require("node-schedule"));
@@ -116,10 +116,12 @@ const programarEnvio = (req, res) => __awaiter(void 0, void 0, void 0, function*
     }
 });
 exports.programarEnvio = programarEnvio;
+let mensajeGuardado = null;
 const obtenerMensaje = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { mensaje, hora } = req.body;
         console.log({ mensaje, hora });
+        mensajeGuardado = { mensaje, hora };
         return res.status(200).json({ mensaje, hora });
     }
     catch (error) {
@@ -128,3 +130,10 @@ const obtenerMensaje = (req, res) => __awaiter(void 0, void 0, void 0, function*
     }
 });
 exports.obtenerMensaje = obtenerMensaje;
+const mensajeToFront = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    if (mensajeGuardado) {
+        return res.status(200).json(mensajeGuardado);
+    }
+    return res.status(404).json({ error: 'No hay mensaje guardado' });
+});
+exports.mensajeToFront = mensajeToFront;

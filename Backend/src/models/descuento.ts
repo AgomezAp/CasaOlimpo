@@ -3,10 +3,10 @@ import sequelize from '../database/connection';
 
 export class Descuento extends Model{
     public Did!: number;
-    public tipo_descuento!: string;
+    public motivo_descuento!: string;
     public fecha_inicio!: Date;
     public fecha_fin!: Date;
-    public descripcion!: string; 
+    public porcentaje!: string; 
 
 }
 Descuento.init(
@@ -16,7 +16,7 @@ Descuento.init(
             autoIncrement: true,
             primaryKey: true, // Agrega esta línea
         },
-        tipo_descuento: {
+        motivo_descuento: {
             type: DataTypes.STRING,
             allowNull: false,
         },
@@ -28,8 +28,8 @@ Descuento.init(
             type: DataTypes.DATE,
             allowNull: false,
         },
-        descripcion: {
-            type: DataTypes.STRING,
+        porcentaje: {
+            type: DataTypes.INTEGER,
             allowNull: false,
         },
     },
