@@ -35,6 +35,8 @@ export class Paciente extends Model {
     public antecedentes !: string;
     public antecedentes_familiares !: string;
     public foto_path!: string;
+    public doctor_anterior?: number;
+    public fecha_transferencia?: Date;
 }
 
 Paciente.init(
@@ -158,6 +160,19 @@ Paciente.init(
             type: DataTypes.STRING(500),
             allowNull: true
         },
+        doctor_anterior: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            references: {
+              model: 'User',
+              key: 'Uid'
+            }
+          },
+          fecha_transferencia: {
+            type: DataTypes.DATE,
+            allowNull: true
+          }
+        
     },
         {
             sequelize,

@@ -42,7 +42,7 @@ Agenda.init({
         allowNull: false,
     },
     estado: {
-        type: sequelize_1.DataTypes.ENUM("Confirmada", "Cancelada", "Pendiente"),
+        type: sequelize_1.DataTypes.ENUM("Confirmada", "Cancelada", "Programada"),
         defaultValue: "Pendiente",
         allowNull: false,
     },
@@ -50,12 +50,32 @@ Agenda.init({
         type: sequelize_1.DataTypes.STRING,
         allowNull: true,
     },
+    duracion: {
+        type: sequelize_1.DataTypes.INTEGER,
+        allowNull: false,
+    },
 }, {
     sequelize: connection_1.default,
     tableName: "Agenda",
     timestamps: false,
 });
-Agenda.belongsTo(user_1.User, { foreignKey: "correo", targetKey: "correo", as: "doctor" });
-user_1.User.hasMany(Agenda, { foreignKey: "correo", sourceKey: "correo", as: "citas" });
-Agenda.belongsTo(paciente_1.Paciente, { foreignKey: "numero_documento", targetKey: "numero_documento", as: "paciente" });
-paciente_1.Paciente.hasMany(Agenda, { foreignKey: "numero_documento", sourceKey: "numero_documento", as: "citas" });
+Agenda.belongsTo(user_1.User, {
+    foreignKey: "correo",
+    targetKey: "correo",
+    as: "doctor",
+});
+user_1.User.hasMany(Agenda, {
+    foreignKey: "correo",
+    sourceKey: "correo",
+    as: "citas",
+});
+Agenda.belongsTo(paciente_1.Paciente, {
+    foreignKey: "numero_documento",
+    targetKey: "numero_documento",
+    as: "paciente",
+});
+paciente_1.Paciente.hasMany(Agenda, {
+    foreignKey: "numero_documento",
+    sourceKey: "numero_documento",
+    as: "citas",
+});

@@ -14,37 +14,56 @@ AgendaNoRegistrados.init({
     ANRid: {
         type: sequelize_1.DataTypes.INTEGER,
         autoIncrement: true,
-        primaryKey: true
+        primaryKey: true,
+    },
+    nombre: {
+        type: sequelize_1.DataTypes.STRING,
+        allowNull: false,
+    },
+    apellidos: {
+        type: sequelize_1.DataTypes.STRING,
+        allowNull: false,
     },
     correo: {
         type: sequelize_1.DataTypes.STRING,
         allowNull: false,
         references: {
-            model: 'User',
-            key: 'correo'
+            model: "User",
+            key: "correo",
         },
     },
     fecha_cita: {
         type: sequelize_1.DataTypes.DATE,
-        allowNull: false
+        allowNull: false,
     },
     hora_cita: {
         type: sequelize_1.DataTypes.TIME,
-        allowNull: false
+        allowNull: false,
     },
     telefono: {
         type: sequelize_1.DataTypes.STRING,
-        allowNull: false
+        allowNull: false,
     },
     estado: {
-        type: sequelize_1.DataTypes.ENUM("Confirmada", "Cancelada", "Pendiente"),
+        type: sequelize_1.DataTypes.ENUM("Confirmada", "Cancelada", "Programada"),
         defaultValue: "Pendiente",
         allowNull: false,
+    },
+    duracion: {
+        type: sequelize_1.DataTypes.INTEGER,
+        allowNull: false,
+    },
+    descripcion: {
+        type: sequelize_1.DataTypes.STRING,
+        allowNull: true,
     },
 }, {
     sequelize: connection_1.default,
     tableName: "AgendaNoRegistrados",
     timestamps: false,
 });
-AgendaNoRegistrados.belongsTo(user_1.User, { foreignKey: "correo", targetKey: "correo" });
-user_1.User.hasOne(AgendaNoRegistrados, { foreignKey: 'correo', as: 'Agenda' });
+AgendaNoRegistrados.belongsTo(user_1.User, {
+    foreignKey: "correo",
+    targetKey: "correo",
+});
+user_1.User.hasOne(AgendaNoRegistrados, { foreignKey: "correo", as: "Agenda" });

@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.obtenerPacientesPorDoctor = exports.actualizarDatosPaciente = exports.obtenerPacienteId = exports.obtenerPacientes = exports.crearPaciente = exports.obtenerFotoPaciente = exports.eliminarFotoPaciente = exports.actualizarFotoPaciente = exports.uploadPacienteFoto = void 0;
+exports.transferirPaciente = exports.obtenerPacientesPorDoctor = exports.actualizarDatosPaciente = exports.obtenerPacienteId = exports.obtenerPacientes = exports.crearPaciente = exports.obtenerFotoPaciente = exports.eliminarFotoPaciente = exports.actualizarFotoPaciente = exports.uploadPacienteFoto = void 0;
 const paciente_1 = require("../models/paciente");
 const dotenv_1 = __importDefault(require("dotenv"));
 const dayjs_1 = __importDefault(require("dayjs"));
@@ -21,6 +21,11 @@ const multer_1 = __importDefault(require("multer"));
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
 const user_1 = require("../models/user");
+const connection_1 = __importDefault(require("../database/connection"));
+const consulta_1 = require("../models/consulta");
+const carpeta_1 = require("../models/carpeta");
+const agenda_1 = require("../models/agenda");
+const sequelize_1 = require("sequelize");
 dotenv_1.default.config();
 const pacientesStorage = multer_1.default.diskStorage({
     destination: (req, file, cb) => {
@@ -220,7 +225,7 @@ const crearPaciente = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         const antecedentesFamiliaresCifrados = (0, encriptado_1.encryptData)(antecedentes_familiares);
         // Crear el paciente incluyendo el Uid del doctor
         const nuevoPaciente = yield paciente_1.Paciente.create({
-            Uid, // Aquí estaba faltando incluir el Uid
+            Uid,
             nombre,
             apellidos,
             fecha_nacimiento: fechaFormateada.toDate(),
@@ -269,7 +274,6 @@ const obtenerPacientes = (req, res) => __awaiter(void 0, void 0, void 0, functio
         // Descifrar los datos sensibles de cada paciente
         const pacientesDescifrados = pacientes.map(paciente => {
             const pacienteJSON = paciente.toJSON();
-            // Usar try-catch para cada campo individualmente
             try {
                 pacienteJSON.direccion_domicilio = (0, encriptado_1.decryptData)(pacienteJSON.direccion_domicilio);
             }
@@ -343,7 +347,6 @@ const obtenerPacienteId = (req, res) => __awaiter(void 0, void 0, void 0, functi
                 message: "Paciente no encontrado",
             });
         }
-        // Aquí está el problema: necesitas convertir primero a objeto plano antes de modificar
         const pacienteJSON = paciente.toJSON();
         // Desencriptar los datos sensibles
         pacienteJSON.direccion_domicilio = (0, encriptado_1.decryptData)(pacienteJSON.direccion_domicilio);
@@ -442,3 +445,113 @@ const obtenerPacientesPorDoctor = (req, res) => __awaiter(void 0, void 0, void 0
     }
 });
 exports.obtenerPacientesPorDoctor = obtenerPacientesPorDoctor;
+/**
+ * Transfiere un paciente de un doctor a otro
+ */
+const transferirPaciente = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { numero_documento } = req.params;
+        const { doctorOrigenId, doctorDestinoId } = req.body;
+        if (!doctorOrigenId || !doctorDestinoId) {
+            return res.status(400).json({
+                message: 'Se requieren los IDs del doctor origen y destino'
+            });
+        }
+        const doctorOrigen = yield user_1.User.findByPk(doctorOrigenId);
+        if (!doctorOrigen || doctorOrigen.rol !== 'Doctor') {
+            return res.status(404).json({
+                message: 'Doctor origen no encontrado o no tiene rol de doctor'
+            });
+        }
+        const doctorDestino = yield user_1.User.findByPk(doctorDestinoId);
+        if (!doctorDestino || doctorDestino.rol !== 'Doctor') {
+            return res.status(404).json({
+                message: 'Doctor destino no encontrado o no tiene rol de doctor'
+            });
+        }
+        const paciente = yield paciente_1.Paciente.findByPk(numero_documento);
+        if (!paciente) {
+            return res.status(404).json({
+                message: 'Paciente no encontrado'
+            });
+        }
+        if (paciente.Uid !== doctorOrigenId) {
+            return res.status(403).json({
+                message: 'El paciente no pertenece al doctor origen especificado'
+            });
+        }
+        const t = yield connection_1.default.transaction();
+        try {
+            // 1. Actualizar paciente
+            yield paciente.update({
+                Uid: doctorDestinoId,
+                fecha_transferencia: new Date(),
+                doctor_anterior: doctorOrigenId
+            }, { transaction: t });
+            // 2. Transferir consultas asociadas al paciente
+            // Nota: Solo cambiamos el Uid, mantenemos el historial de quién creó la consulta
+            yield consulta_1.Consulta.update({
+                Uid: doctorDestinoId
+            }, {
+                where: {
+                    numero_documento,
+                    abierto: false,
+                },
+                transaction: t
+            });
+            // 3. Transferir cualquier otra información relacionada (por ejemplo, carpetas)
+            yield carpeta_1.Carpeta.update({
+                Uid: doctorDestinoId
+            }, {
+                where: {
+                    numero_documento
+                },
+                transaction: t
+            });
+            // 4. Transferir citas pendientes en la agenda
+            yield agenda_1.Agenda.update({
+                Uid: doctorDestinoId
+            }, {
+                where: {
+                    numero_documento,
+                    fecha: { [sequelize_1.Op.gte]: new Date() } // Solo futuras citas
+                },
+                transaction: t
+            });
+            // Confirmar transacción
+            yield t.commit();
+            return res.status(200).json({
+                message: 'Paciente transferido correctamente',
+                data: {
+                    paciente: {
+                        numero_documento: paciente.numero_documento,
+                        nombre: paciente.nombre,
+                        apellidos: paciente.apellidos
+                    },
+                    doctor_origen: {
+                        id: doctorOrigen.Uid,
+                        nombre: doctorOrigen.nombre
+                    },
+                    doctor_destino: {
+                        id: doctorDestino.Uid,
+                        nombre: doctorDestino.nombre
+                    },
+                    fecha_transferencia: new Date()
+                }
+            });
+        }
+        catch (error) {
+            // Si hay error, deshacer todas las operaciones
+            yield t.rollback();
+            throw error;
+        }
+    }
+    catch (error) {
+        console.error('Error transfiriendo paciente:', error);
+        return res.status(500).json({
+            message: 'Error al transferir el paciente',
+            error: error.message
+        });
+    }
+});
+exports.transferirPaciente = transferirPaciente;

@@ -11,4 +11,5 @@ router.post("/api/paciente/:numero_documento/foto", [paciente_1.uploadPacienteFo
 router.delete('/api/paciente/:numero_documento/foto', paciente_1.eliminarFotoPaciente);
 router.get('/api/paciente/:numero_documento/foto', paciente_1.obtenerFotoPaciente);
 router.get('/api/doctor/:Uid/pacientes', paciente_1.obtenerPacientesPorDoctor);
+router.post('/api/paciente/:numero_documento/transferir', paciente_1.transferirPaciente);
 exports.default = router;

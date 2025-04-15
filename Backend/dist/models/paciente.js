@@ -125,6 +125,18 @@ Paciente.init({
         type: sequelize_1.DataTypes.STRING(500),
         allowNull: true
     },
+    doctor_anterior: {
+        type: sequelize_1.DataTypes.INTEGER,
+        allowNull: true,
+        references: {
+            model: 'User',
+            key: 'Uid'
+        }
+    },
+    fecha_transferencia: {
+        type: sequelize_1.DataTypes.DATE,
+        allowNull: true
+    }
 }, {
     sequelize: connection_1.default,
     tableName: "Paciente",

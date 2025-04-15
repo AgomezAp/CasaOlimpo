@@ -9,9 +9,10 @@ export class Agenda extends Model {
   public correo!: string;
   public fecha_cita!: Date;
   public hora_cita!: string;
-  public estado!: "Confirmada" | "Cancelada" | "Pendiente";
+  public estado!: "Confirmada" | "Cancelada" | "Programada";
   public numero_documento!: string;
   public descripcion!: string;
+  public duracion!: number;
 }
 Agenda.init(
   {
@@ -46,13 +47,17 @@ Agenda.init(
       allowNull: false,
     },
     estado: {
-      type: DataTypes.ENUM("Confirmada", "Cancelada", "Pendiente"),
+      type: DataTypes.ENUM("Confirmada", "Cancelada", "Programada"),
       defaultValue: "Pendiente",
       allowNull: false,
     },
     descripcion: {
       type: DataTypes.STRING,
       allowNull: true,
+    },
+    duracion: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
     },
   },
   {
@@ -61,7 +66,23 @@ Agenda.init(
     timestamps: false,
   }
 );
-Agenda.belongsTo(User, { foreignKey: "correo", targetKey: "correo", as: "doctor" });
-User.hasMany(Agenda, { foreignKey: "correo", sourceKey: "correo", as: "citas" });
-Agenda.belongsTo(Paciente, { foreignKey: "numero_documento", targetKey: "numero_documento", as: "paciente" });
-Paciente.hasMany(Agenda, { foreignKey: "numero_documento", sourceKey: "numero_documento", as: "citas" });
+Agenda.belongsTo(User, {
+  foreignKey: "correo",
+  targetKey: "correo",
+  as: "doctor",
+});
+User.hasMany(Agenda, {
+  foreignKey: "correo",
+  sourceKey: "correo",
+  as: "citas",
+});
+Agenda.belongsTo(Paciente, {
+  foreignKey: "numero_documento",
+  targetKey: "numero_documento",
+  as: "paciente",
+});
+Paciente.hasMany(Agenda, {
+  foreignKey: "numero_documento",
+  sourceKey: "numero_documento",
+  as: "citas",
+});

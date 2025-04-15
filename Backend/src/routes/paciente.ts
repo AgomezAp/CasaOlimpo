@@ -8,6 +8,7 @@ import {
   obtenerPacienteId,
   obtenerPacientes,
   obtenerPacientesPorDoctor,
+  transferirPaciente,
   uploadPacienteFoto,
 } from "../controllers/paciente";
 
@@ -22,4 +23,7 @@ router.post("/api/paciente/:numero_documento/foto", [uploadPacienteFoto.single("
 router.delete('/api/paciente/:numero_documento/foto',  eliminarFotoPaciente);
 router.get('/api/paciente/:numero_documento/foto',  obtenerFotoPaciente);
 router.get('/api/doctor/:Uid/pacientes', obtenerPacientesPorDoctor);
+
+
+router.post('/api/paciente/:numero_documento/transferir', transferirPaciente);
 export default router;

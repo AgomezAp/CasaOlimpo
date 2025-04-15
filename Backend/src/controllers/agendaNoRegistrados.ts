@@ -13,7 +13,8 @@ export const crearCitaNoRegistrado = async (
   req: Request,
   res: Response
 ): Promise<any> => {
-  const { correo, fecha_cita, hora_cita, telefono, estado } = req.body;
+  const { correo, fecha_cita, hora_cita, telefono, estado,nombre,apellidos,duracion  } = req.body;       // Asegúrate de que estos campos estén presentes
+  
 
   try {
     // Validar formato de fecha
@@ -44,6 +45,11 @@ export const crearCitaNoRegistrado = async (
     if (!telefono || telefono.length < 7) {
       return res.status(400).json({
         message: "Debe proporcionar un número de teléfono válido.",
+      });
+    }
+    if (!duracion || isNaN(Number(duracion)) || Number(duracion) <= 0) {
+      return res.status(400).json({
+        message: "La duración debe ser un número positivo en minutos",
       });
     }
 
@@ -152,11 +158,14 @@ export const crearCitaNoRegistrado = async (
 
     // 4. Crear la cita
     const nuevaCita = await AgendaNoRegistrados.create({
+      nombre,          // Asegúrate de que estos campos estén presentes
+      apellidos,  
       correo,
       fecha_cita: fechaFormateada.toDate(),
       hora_cita,
       telefono,
-      estado: estado || "Pendiente"
+      estado: estado || "Pendiente",
+      duracion: Number(duracion)
     });
 
     return res.status(201).json({
@@ -285,7 +294,15 @@ export const actualizarCitaNoRegistrado = async (
       }
       actualizaciones.estado = datosActualizados.estado;
     }
-
+    if (datosActualizados.duracion !== undefined) {
+      const duracionNum = Number(datosActualizados.duracion);
+      if (isNaN(duracionNum) || duracionNum <= 0) {
+        return res.status(400).json({ 
+          message: "La duración debe ser un número positivo en minutos" 
+        });
+      }
+      actualizaciones.duracion = duracionNum;
+    }
     // 4. Si no hay nada que actualizar, retornar error
     if (Object.keys(actualizaciones).length === 0) {
       return res.status(400).json({ message: "No se proporcionaron datos para actualizar" });

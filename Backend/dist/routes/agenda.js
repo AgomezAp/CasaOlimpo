@@ -8,4 +8,6 @@ router.patch("/api/agenda/actualizar/:Aid", agenda_1.actualizarCita);
 router.delete("/api/agenda/eliminar/:Aid", agenda_1.eliminarCita);
 router.get("/api/agenda/obtener_citas", agenda_1.obtenerCitas);
 router.get("/api/agenda/obtener_citas/:numero_documento", agenda_1.obtenerCitasPorDoctor);
+router.get('/api/agenda/:numero_documento/citas', agenda_1.obtenerCitasPorPaciente);
+router.get('/api/agenda/horas-ocupadas/:fecha', agenda_1.getHorasOcupadas);
 exports.default = router;

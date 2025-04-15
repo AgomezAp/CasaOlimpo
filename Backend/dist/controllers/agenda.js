@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.obtenerCitasPorDoctor = exports.obtenerCitas = exports.eliminarCita = exports.actualizarCita = exports.crearCita = void 0;
+exports.getHorasOcupadas = exports.obtenerCitasPorPaciente = exports.obtenerCitasPorDoctor = exports.obtenerCitas = exports.eliminarCita = exports.actualizarCita = exports.crearCita = void 0;
 const agenda_1 = require("../models/agenda");
 const user_1 = require("../models/user");
 const paciente_1 = require("../models/paciente");
@@ -21,7 +21,7 @@ const sequelize_1 = require("sequelize"); // Importar operadores de Sequelize
 const connection_1 = __importDefault(require("../database/connection"));
 const agendaNoRegistrados_1 = require("../models/agendaNoRegistrados");
 const crearCita = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { correo, numero_documento, fecha_cita, hora_cita, estado, descripcion, telefono } = req.body;
+    const { correo, numero_documento, fecha_cita, hora_cita, estado, descripcion, telefono, duracion, } = req.body;
     try {
         // Formatear y validar fecha primero
         const fechaFormateada = (0, dayjs_1.default)(fecha_cita, "YYYY-MM-DD");
@@ -124,7 +124,8 @@ const crearCita = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             hora_cita,
             estado: estado || "Pendiente",
             descripcion,
-            telefono
+            telefono,
+            duracion
         });
         return res.status(201).json({
             message: "Cita creada correctamente",
@@ -372,3 +373,122 @@ const obtenerCitasPorDoctor = (req, res) => __awaiter(void 0, void 0, void 0, fu
     }
 });
 exports.obtenerCitasPorDoctor = obtenerCitasPorDoctor;
+/**
+ * Obtiene todas las citas de un paciente por su número de documento
+ */
+const obtenerCitasPorPaciente = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { numero_documento } = req.params;
+        if (!numero_documento) {
+            return res.status(400).json({
+                message: "Se requiere el número de documento del paciente"
+            });
+        }
+        // Buscar todas las citas del paciente
+        const citas = yield agenda_1.Agenda.findAll({
+            where: {
+                numero_documento
+            },
+            attributes: ['Aid', 'fecha_cita', 'hora_cita', 'estado', 'descripcion', 'duracion'],
+            include: [
+                {
+                    model: user_1.User,
+                    as: "doctor",
+                    attributes: ['nombre']
+                }
+            ],
+            order: [
+                ['fecha_cita', 'ASC'],
+                ['hora_cita', 'ASC']
+            ]
+        });
+        if (citas.length === 0) {
+            return res.status(200).json({
+                message: "El paciente no tiene citas programadas",
+                data: []
+            });
+        }
+        return res.status(200).json({
+            message: "Citas del paciente obtenidas correctamente",
+            total_citas: citas.length,
+            data: citas
+        });
+    }
+    catch (err) {
+        console.error("Error obteniendo las citas del paciente:", err);
+        return res.status(500).json({
+            message: "Error al obtener las citas del paciente",
+            error: err.message
+        });
+    }
+});
+exports.obtenerCitasPorPaciente = obtenerCitasPorPaciente;
+const getHorasOcupadas = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { fecha } = req.params;
+        // Validar formato de fecha
+        const fechaFormateada = (0, dayjs_1.default)(fecha, "YYYY-MM-DD");
+        if (!fechaFormateada.isValid()) {
+            return res.status(400).json({
+                message: "Formato de fecha inválido. Use YYYY-MM-DD",
+                data: []
+            });
+        }
+        const fechaStr = fechaFormateada.format('YYYY-MM-DD');
+        // Obtener citas de pacientes registrados
+        const citasRegistradas = yield agenda_1.Agenda.findAll({
+            where: {
+                [sequelize_1.Op.and]: [
+                    connection_1.default.where(connection_1.default.fn("DATE", connection_1.default.col("fecha_cita")), fechaStr)
+                ]
+            },
+            attributes: ['hora_cita', 'duracion'],
+            raw: true
+        });
+        // Obtener citas de pacientes no registrados
+        const citasNoRegistradas = yield agendaNoRegistrados_1.AgendaNoRegistrados.findAll({
+            where: {
+                [sequelize_1.Op.and]: [
+                    connection_1.default.where(connection_1.default.fn("DATE", connection_1.default.col("fecha_cita")), fechaStr)
+                ]
+            },
+            attributes: ['hora_cita', 'duracion'],
+            raw: true
+        });
+        // Combinar todas las citas
+        const todasLasCitas = [...citasRegistradas, ...citasNoRegistradas];
+        // Extraer horas ocupadas considerando la duración de cada cita
+        const horasOcupadas = new Set();
+        todasLasCitas.forEach(cita => {
+            // Hora base de la cita
+            const [horas, minutos] = cita.hora_cita.split(':').map(Number);
+            let citaMinutos = horas * 60 + minutos;
+            // Duración de la cita (por defecto 30 minutos si no está definida)
+            const duracion = cita.duracion || 30;
+            // Añadir la hora base
+            horasOcupadas.add(cita.hora_cita.substring(0, 5));
+            // Añadir intervalos de 30 minutos durante la duración de la cita
+            for (let i = 30; i < duracion; i += 30) {
+                const nuevoMinuto = citaMinutos + i;
+                const nuevaHora = Math.floor(nuevoMinuto / 60).toString().padStart(2, '0');
+                const nuevoMinutoStr = (nuevoMinuto % 60).toString().padStart(2, '0');
+                horasOcupadas.add(`${nuevaHora}:${nuevoMinutoStr}`);
+            }
+        });
+        // Convertir Set a Array para la respuesta
+        const horasOcupadasArray = Array.from(horasOcupadas).sort();
+        return res.status(200).json({
+            message: "Horas ocupadas obtenidas correctamente",
+            data: horasOcupadasArray
+        });
+    }
+    catch (err) {
+        console.error("Error obteniendo horas ocupadas:", err);
+        return res.status(500).json({
+            message: "Error al obtener horas ocupadas",
+            error: err.message,
+            data: []
+        });
+    }
+});
+exports.getHorasOcupadas = getHorasOcupadas;

@@ -10,6 +10,11 @@ import { v4 as uuidv4 } from 'uuid';
 import sharp from 'sharp';
 import { NextFunction } from 'express';
 import { User } from "../models/user";
+import sequelize from "../database/connection";
+import { Consulta } from "../models/consulta";
+import { Carpeta } from "../models/carpeta";
+import { Agenda } from "../models/agenda";
+import { Op } from "sequelize";
 
 dotenv.config();
 
@@ -234,7 +239,7 @@ const pacientesStorage = multer.diskStorage({
 
         // Crear el paciente incluyendo el Uid del doctor
         const nuevoPaciente = await Paciente.create({
-            Uid, // Aquí estaba faltando incluir el Uid
+            Uid, 
             nombre,
             apellidos,
             fecha_nacimiento: fechaFormateada.toDate(),
@@ -288,7 +293,6 @@ export const obtenerPacientes = async (req: Request, res: Response): Promise<any
         const pacientesDescifrados = pacientes.map(paciente => {
             const pacienteJSON = paciente.toJSON();
             
-            // Usar try-catch para cada campo individualmente
             try {
                 pacienteJSON.direccion_domicilio = decryptData(pacienteJSON.direccion_domicilio);
             } catch (e) {
@@ -358,7 +362,6 @@ export const obtenerPacienteId = async (req: Request, res: Response): Promise<an
             });
         }
 
-        // Aquí está el problema: necesitas convertir primero a objeto plano antes de modificar
         const pacienteJSON = paciente.toJSON();
         
         // Desencriptar los datos sensibles
@@ -460,6 +463,135 @@ export const obtenerPacientesPorDoctor = async (req: Request, res: Response): Pr
     console.error('Error obteniendo pacientes por doctor:', error);
     return res.status(500).json({
       message: 'Error obteniendo pacientes por doctor',
+      error: error.message
+    });
+  }
+};
+/**
+ * Transfiere un paciente de un doctor a otro
+ */
+export const transferirPaciente = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const { numero_documento } = req.params;
+    const { doctorOrigenId, doctorDestinoId } = req.body;
+
+    if (!doctorOrigenId || !doctorDestinoId) {
+      return res.status(400).json({ 
+        message: 'Se requieren los IDs del doctor origen y destino'
+      });
+    }
+    
+    const doctorOrigen = await User.findByPk(doctorOrigenId);
+    if (!doctorOrigen || doctorOrigen.rol !== 'Doctor') {
+      return res.status(404).json({ 
+        message: 'Doctor origen no encontrado o no tiene rol de doctor' 
+      });
+    }
+    
+    const doctorDestino = await User.findByPk(doctorDestinoId);
+    if (!doctorDestino || doctorDestino.rol !== 'Doctor') {
+      return res.status(404).json({ 
+        message: 'Doctor destino no encontrado o no tiene rol de doctor' 
+      });
+    }
+    
+    const paciente = await Paciente.findByPk(numero_documento);
+    if (!paciente) {
+      return res.status(404).json({ 
+        message: 'Paciente no encontrado' 
+      });
+    }
+    
+    if (paciente.Uid !== doctorOrigenId) {
+      return res.status(403).json({ 
+        message: 'El paciente no pertenece al doctor origen especificado' 
+      });
+    }
+    
+    const t = await sequelize.transaction();
+    
+    try {
+      // 1. Actualizar paciente
+      await paciente.update({ 
+        Uid: doctorDestinoId,
+        fecha_transferencia: new Date(),
+        doctor_anterior: doctorOrigenId
+      }, { transaction: t });
+      
+      // 2. Transferir consultas asociadas al paciente
+      // Nota: Solo cambiamos el Uid, mantenemos el historial de quién creó la consulta
+      await Consulta.update(
+        { 
+          Uid: doctorDestinoId 
+        },
+        { 
+          where: { 
+            numero_documento,
+            abierto: false,
+          },
+          transaction: t
+        }
+      );
+      
+      // 3. Transferir cualquier otra información relacionada (por ejemplo, carpetas)
+      await Carpeta.update(
+        { 
+          Uid: doctorDestinoId 
+        },
+        { 
+          where: { 
+            numero_documento 
+          },
+          transaction: t
+        }
+      );
+      
+      // 4. Transferir citas pendientes en la agenda
+      await Agenda.update(
+        { 
+          Uid: doctorDestinoId 
+        },
+        { 
+          where: { 
+            numero_documento,
+            fecha: { [Op.gte]: new Date() }  // Solo futuras citas
+          },
+          transaction: t
+        }
+      );
+      
+      // Confirmar transacción
+      await t.commit();
+      
+      return res.status(200).json({
+        message: 'Paciente transferido correctamente',
+        data: {
+          paciente: {
+            numero_documento: paciente.numero_documento,
+            nombre: paciente.nombre,
+            apellidos: paciente.apellidos
+          },
+          doctor_origen: {
+            id: doctorOrigen.Uid,
+            nombre: doctorOrigen.nombre
+          },
+          doctor_destino: {
+            id: doctorDestino.Uid,
+            nombre: doctorDestino.nombre
+          },
+          fecha_transferencia: new Date()
+        }
+      });
+    } catch (error) {
+      // Si hay error, deshacer todas las operaciones
+      await t.rollback();
+      throw error;
+    }
+    
+  } catch (error: any) {
+    console.error('Error transfiriendo paciente:', error);
+    return res.status(500).json({
+      message: 'Error al transferir el paciente',
       error: error.message
     });
   }
