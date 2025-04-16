@@ -25,7 +25,11 @@ RedFamiliar.init({
         allowNull: false
     },
     correo: {
-        type: sequelize_1.DataTypes.DATE,
+        type: sequelize_1.DataTypes.STRING, // NOTA: Esto parece ser STRING, no DATE
+        allowNull: false
+    },
+    telefono: {
+        type: sequelize_1.DataTypes.STRING,
         allowNull: false
     },
     numero_documento: {
@@ -40,6 +44,11 @@ RedFamiliar.init({
             key: 'numero_documento'
         }
     },
+    es_responsable: {
+        type: sequelize_1.DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false
+    }
 }, {
     sequelize: connection_1.default,
     tableName: "RedFamiliar",

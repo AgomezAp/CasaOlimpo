@@ -12,7 +12,7 @@ export class RedFamiliar extends Model {
     public telefono!: string;
     public numero_documento !: string;
     public numero_documento_familiar!: string;
-
+    public es_responsable!: boolean;
 }
 
 RedFamiliar.init(
@@ -25,21 +25,24 @@ RedFamiliar.init(
         nombre: {
             type: DataTypes.STRING,
             allowNull: false,
-            
         },
         apellido: {
             type: DataTypes.STRING,
             allowNull: false
         },
         correo: {
-            type: DataTypes.DATE,
+            type: DataTypes.STRING, // NOTA: Esto parece ser STRING, no DATE
             allowNull: false
         },
-         numero_documento :{
+        telefono: {
             type: DataTypes.STRING,
             allowNull: false
         },
-        numero_documento_familiar :{
+        numero_documento: {
+            type: DataTypes.STRING,
+            allowNull: false
+        },
+        numero_documento_familiar: {
             type: DataTypes.STRING,
             allowNull: false,
             references: {   
@@ -47,6 +50,11 @@ RedFamiliar.init(
                 key: 'numero_documento' 
             }
         },
+        es_responsable: { // Añadido este campo que faltaba
+            type: DataTypes.BOOLEAN,
+            allowNull: false,
+            defaultValue: false
+        }
     },
     {
         sequelize,
