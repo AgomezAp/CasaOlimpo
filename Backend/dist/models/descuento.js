@@ -15,7 +15,7 @@ Descuento.init({
         autoIncrement: true,
         primaryKey: true, // Agrega esta línea
     },
-    tipo_descuento: {
+    motivo_descuento: {
         type: sequelize_1.DataTypes.STRING,
         allowNull: false,
     },
@@ -27,8 +27,8 @@ Descuento.init({
         type: sequelize_1.DataTypes.DATE,
         allowNull: false,
     },
-    descripcion: {
-        type: sequelize_1.DataTypes.STRING,
+    porcentaje: {
+        type: sequelize_1.DataTypes.INTEGER,
         allowNull: false,
     },
 }, {

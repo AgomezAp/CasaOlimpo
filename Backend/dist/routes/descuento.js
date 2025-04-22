@@ -1,5 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
+const descuento_1 = require("../controllers/descuento");
 const router = (0, express_1.Router)();
+router.post("/api/descuento/crearDescuento", descuento_1.crearDescuento);
+router.get("/api/descuento/obtenerDescuento", descuento_1.obtenerDescuentos);
+router.delete("/api/descuento/eliminarDescuento/:id", descuento_1.eliminarDescuento);
+router.put("/api/descuento/actualizarDescuento/:id", descuento_1.editarDescuento);
 exports.default = router;

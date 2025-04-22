@@ -9,54 +9,56 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.verFacturas = exports.reimprimir = exports.crearFactura = void 0;
+exports.facturaById = exports.verFacturas = exports.crearFactura = void 0;
 const paciente_1 = require("../models/paciente");
 const facturacion_1 = require("../models/facturacion");
 const facturacion_2 = require("../services/facturacion");
 const crearFactura = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const { numero_documento, tipo_pago, total } = req.body;
-        if (!numero_documento || !tipo_pago || !total) {
-            return res.status(400).json({ message: 'Todos los campos son obligatorios' });
+        const { numero_documento, tipo_pago, total, producto } = req.body;
+        if (!numero_documento || !tipo_pago || !total || !producto) {
+            return res.status(400).json({ success: false, message: 'Todos los campos son obligatorios' });
         }
-        const paciente = yield paciente_1.Paciente.findAll({
-            where: {
-                numero_documento: numero_documento,
-            },
+        const paciente = yield paciente_1.Paciente.findOne({
+            where: { numero_documento },
         });
-        if (paciente.length === 0) {
-            return res.status(404).json({ message: "El paciente no existe", });
+        if (!paciente) {
+            return res.status(404).json({ succes: false, message: "El paciente no existe", });
         }
         const nuevaFactura = yield facturacion_1.Factura.create({
             numero_documento,
             tipo_pago,
             total
         });
-        (0, facturacion_2.crearPDF)(nuevaFactura);
-        return res.status(200).json(nuevaFactura);
+        const pdfBuffer = yield (0, facturacion_2.crearPDF)({
+            factura: nuevaFactura,
+            paciente: paciente,
+            producto: producto
+        });
+        res.setHeader('Content-type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename=factura${nuevaFactura.Fid}.pdf`);
+        return res.send(pdfBuffer);
     }
     catch (error) {
-        console.error('Error al crear la consulta:', error);
+        console.error('Error al crear la factura:', error);
         return res.status(500).json({ error: 'Error interno del servidor.' });
     }
 });
 exports.crearFactura = crearFactura;
-const reimprimir = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        const { Fid } = req.body;
-        const factura = yield facturacion_1.Factura.findOne({ where: { Fid } });
-        if (factura === null) {
-            return res.status(404).json({ message: 'Factura no encontrada' });
-        }
-        (0, facturacion_2.crearPDF)(factura);
-        return res.status(200).json(factura);
-    }
-    catch (error) {
-        console.error('Error al crear la consulta:', error);
-        return res.status(500).json({ error: 'Error interno del servidor.' });
-    }
-});
-exports.reimprimir = reimprimir;
+// export const reimprimir = async (req: Request, res: Response): Promise<any> => {
+//     try {
+//         const { Fid } = req.body;
+//         const factura = await Factura.findOne({ where: { Fid } })
+//         if(factura === null){
+//             return res.status(404).json({message: 'Factura no encontrada'})
+//         }
+//         crearPDF(factura);
+//         return res.status(200).json(factura);
+//     } catch (error) {
+//         console.error('Error al crear la consulta:', error);
+//         return res.status(500).json({ error: 'Error interno del servidor.' });
+//     }
+// }
 const verFacturas = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const facturas = yield facturacion_1.Factura.findAll();
@@ -71,3 +73,21 @@ const verFacturas = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
     }
 });
 exports.verFacturas = verFacturas;
+const facturaById = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { id } = req.body;
+    try {
+        const facturasId = yield facturacion_1.Factura.findAll({
+            where: {
+                numero_documento: id
+            }
+        });
+        if (facturasId === null) {
+            return res.status(404).json({ message: 'Ninguna factura encontrada' });
+        }
+        return res.status(200).json({ facturasId });
+    }
+    catch (_a) {
+        return res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+exports.facturaById = facturaById;
