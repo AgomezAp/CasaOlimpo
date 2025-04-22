@@ -47,7 +47,7 @@ Agenda.init(
       allowNull: false,
     },
     estado: {
-      type: DataTypes.ENUM("Confirmada", "Cancelada", "Programada"),
+      type: DataTypes.ENUM("Confirmada", "Cancelada", "Programada","Pendiente"),
       defaultValue: "Pendiente",
       allowNull: false,
     },

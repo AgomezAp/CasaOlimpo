@@ -42,7 +42,7 @@ Agenda.init({
         allowNull: false,
     },
     estado: {
-        type: sequelize_1.DataTypes.ENUM("Confirmada", "Cancelada", "Programada"),
+        type: sequelize_1.DataTypes.ENUM("Confirmada", "Cancelada", "Programada", "Pendiente"),
         defaultValue: "Pendiente",
         allowNull: false,
     },
