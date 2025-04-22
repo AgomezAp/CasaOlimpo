@@ -6,4 +6,5 @@ const router = (0, express_1.Router)();
 router.post("/api/mensajeria/felicitaciones", mensajeria_1.enviarMensaje);
 router.post("/api/mensajeria/obtenerMensaje", mensajeria_1.obtenerMensaje);
 router.get("/api/mensajeria/obtenerCumple", mensajeria_1.obtenerFecha);
+router.get("/api/mensajeria/mensaje", mensajeria_1.mensajeToFront);
 exports.default = router;

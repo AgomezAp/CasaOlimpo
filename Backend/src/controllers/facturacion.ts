@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { Paciente } from '../models/paciente';
 import { Factura } from '../models/facturacion';
 import { crearPDF } from '../services/facturacion';
+import { error } from 'console';
 
 export const crearFactura = async (req: Request, res:Response): Promise<any> => {
     try {
@@ -62,3 +63,19 @@ export const verFacturas = async (req: Request, res: Response): Promise<any> => 
     }
 }
 
+export const facturaById = async (req: Request, res:Response): Promise<any> => {
+    const { id } = req.body
+    try {
+        const facturasId = await Factura.findAll({
+            where: {
+                numero_documento: id
+            }
+        })
+        if(facturasId === null) {
+            return res.status(404).json({message: 'Ninguna factura encontrada'})
+        }
+        return res.status(200).json({facturasId})
+    } catch {
+        return res.status(500).json({error: 'Error interno del servidor'})
+    }
+}

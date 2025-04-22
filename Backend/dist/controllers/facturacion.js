@@ -9,7 +9,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.verFacturas = exports.crearFactura = void 0;
+exports.facturaById = exports.verFacturas = exports.crearFactura = void 0;
 const paciente_1 = require("../models/paciente");
 const facturacion_1 = require("../models/facturacion");
 const facturacion_2 = require("../services/facturacion");
@@ -73,3 +73,21 @@ const verFacturas = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
     }
 });
 exports.verFacturas = verFacturas;
+const facturaById = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { id } = req.body;
+    try {
+        const facturasId = yield facturacion_1.Factura.findAll({
+            where: {
+                numero_documento: id
+            }
+        });
+        if (facturasId === null) {
+            return res.status(404).json({ message: 'Ninguna factura encontrada' });
+        }
+        return res.status(200).json({ facturasId });
+    }
+    catch (_a) {
+        return res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+exports.facturaById = facturaById;
