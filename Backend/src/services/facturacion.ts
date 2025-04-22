@@ -2,8 +2,6 @@ import PDFDocument from 'pdfkit';
 import path from 'path';
 import fs from 'fs';
 import { Factura } from '../models/facturacion';
-import { resolve } from 'path';
-import { rejects } from 'assert';
 import { Paciente } from '../models/paciente';
 
 export async function crearPDF(data: {factura: Factura, paciente: Paciente, producto: {descripcion: string; precio: number;}}): Promise<Buffer> {
