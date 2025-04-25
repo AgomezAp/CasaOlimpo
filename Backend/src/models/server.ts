@@ -31,17 +31,18 @@ dotenv.config();
 class Server{
 
     private app: Application;
-    private port?: string;
+    private port: number;
     constructor(){
         this.app = express();
-        this.port = process.env.PORT;
+        const portStr = process.env.PORT || '3000';
+        this.port = parseInt(portStr, 10);
         this.middlewares();
         this.router();
         this.DBconnect();
         this.listen();
     }
     listen (){
-        this.app.listen(this.port, () => {
+        this.app.listen(this.port,'0.0.0.0', () => {
             console.log("Server running on port: " + this.port);
         });
     }

@@ -76,14 +76,15 @@ dotenv_1.default.config();
 class Server {
     constructor() {
         this.app = (0, express_1.default)();
-        this.port = process.env.PORT;
+        const portStr = process.env.PORT || '3000';
+        this.port = parseInt(portStr, 10);
         this.middlewares();
         this.router();
         this.DBconnect();
         this.listen();
     }
     listen() {
-        this.app.listen(this.port, () => {
+        this.app.listen(this.port, '0.0.0.0', () => {
             console.log("Server running on port: " + this.port);
         });
     }
