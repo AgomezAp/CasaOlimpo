@@ -15,15 +15,16 @@ const facturacion_1 = require("../models/facturacion");
 const facturacion_2 = require("../services/facturacion");
 const crearFactura = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const { numero_documento, tipo_pago, total, producto } = req.body;
-        if (!numero_documento || !tipo_pago || !total || !producto) {
+        const { numero_documento, tipo_pago, total } = req.body;
+        const producto = { descripcion: 'facturacion de prueba', precio: total };
+        if (!numero_documento || !tipo_pago || !total) {
             return res.status(400).json({ success: false, message: 'Todos los campos son obligatorios' });
         }
         const paciente = yield paciente_1.Paciente.findOne({
             where: { numero_documento },
         });
         if (!paciente) {
-            return res.status(404).json({ succes: false, message: "El paciente no existe", });
+            return res.status(404).json({ success: false, message: "El paciente no existe", });
         }
         const nuevaFactura = yield facturacion_1.Factura.create({
             numero_documento,
@@ -35,9 +36,8 @@ const crearFactura = (req, res) => __awaiter(void 0, void 0, void 0, function* (
             paciente: paciente,
             producto: producto
         });
-        res.setHeader('Content-type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename=factura${nuevaFactura.Fid}.pdf`);
-        return res.send(pdfBuffer);
+        res.setHeader('Content-Type', 'application/pdf');
+        res.send(pdfBuffer);
     }
     catch (error) {
         console.error('Error al crear la factura:', error);
