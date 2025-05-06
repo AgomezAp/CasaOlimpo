@@ -12,11 +12,14 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getConsulta = exports.getConsentimientoPDF = exports.cerrarConsulta = exports.getConsultasDoctor = exports.getConsultasPorPaciente = exports.updateConsulta = exports.nuevaConsulta = exports.uploadConsentimiento = void 0;
+exports.getConsultaid = exports.getConsulta = exports.getConsentimientoPDF = exports.cerrarConsulta = exports.getConsultasDoctor = exports.getConsultasPorPaciente = exports.updateConsulta = exports.nuevaConsulta = exports.uploadConsentimiento = void 0;
 const consulta_1 = require("../models/consulta");
 const paciente_1 = require("../models/paciente");
 const user_1 = require("../models/user");
 const multer_1 = __importDefault(require("multer"));
+const sequelize_1 = require("sequelize");
+const connection_1 = __importDefault(require("../database/connection"));
+const pdf_lib_1 = require("pdf-lib");
 const storage = multer_1.default.memoryStorage(); // Almacena en memoria
 const upload = (0, multer_1.default)({
     storage,
@@ -28,9 +31,7 @@ exports.uploadConsentimiento = upload.single('consentimiento_info');
 const nuevaConsulta = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { numero_documento } = req.params;
-        const { motivo, enfermedad_actual, objetivos_terapia, historia_problema, desarrollo, plan_terapeutico, tipo_diagnostico, analisis_diagnostico, plan_tratamiento, recomendaciones, fecha, 
-        // ELIMINAR correo de aquí, lo obtendremos del usuario
-        consentimiento_check, abierto, Uid } = req.body;
+        const { motivo, enfermedad_actual, objetivos_terapia, historia_problema, tipo_diagnostico, plan_tratamiento, recomendaciones, fecha, contraindicaciones, abierto, Uid } = req.body;
         const consentimientoArchivo = req.file ? req.file.buffer : null;
         if (!Uid) {
             return res.status(400).json({
@@ -78,11 +79,9 @@ const nuevaConsulta = (req, res) => __awaiter(void 0, void 0, void 0, function* 
             enfermedad_actual,
             objetivos_terapia,
             historia_problema,
-            desarrollo,
-            plan_terapeutico,
             tipo_diagnostico,
-            analisis_diagnostico,
             plan_tratamiento,
+            contraindicaciones,
             recomendaciones,
             fecha: fecha || new Date(),
             correo: correoDoctor, // USAR EL CORREO OBTENIDO DEL DOCTOR
@@ -320,26 +319,62 @@ const getConsentimientoPDF = (req, res) => __awaiter(void 0, void 0, void 0, fun
                 message: "Se requiere ID de consulta"
             });
         }
-        // Buscar la consulta pero solo obtener el campo consentimiento_info
-        const consulta = yield consulta_1.Consulta.findByPk(Cid, {
-            attributes: ['consentimiento_info', 'consentimiento_check']
+        // Consulta SQL directa - mucho más rápida para BLOBs grandes
+        const [resultado] = yield connection_1.default.query('SELECT "consentimiento_info", "consentimiento_check" FROM "Consulta" WHERE "Cid" = :Cid LIMIT 1', {
+            replacements: { Cid },
+            type: sequelize_1.QueryTypes.SELECT,
+            raw: true
         });
-        if (!consulta) {
+        if (!resultado) {
             return res.status(404).json({
                 message: 'Consulta no encontrada',
                 Cid
             });
         }
-        // Verificar si existe el PDF
-        if (!consulta.consentimiento_info || !consulta.consentimiento_check) {
+        // @ts-ignore - El tipo de resultado puede variar
+        if (!resultado.consentimiento_info || !resultado.consentimiento_check) {
             return res.status(404).json({
                 message: 'Esta consulta no tiene un documento de consentimiento'
             });
         }
-        // Enviar el PDF como respuesta
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename=consentimiento_${Cid}.pdf`);
-        return res.send(consulta.consentimiento_info);
+        try {
+            // @ts-ignore - Obtener el PDF original
+            const originalBuffer = Buffer.from(resultado.consentimiento_info);
+            const originalSizeBytes = originalBuffer.length;
+            const pdfDoc = yield pdf_lib_1.PDFDocument.load(originalBuffer);
+            // Comprimir el PDF con opciones optimizadas
+            const compressedPdfBytes = yield pdfDoc.save({
+                useObjectStreams: true,
+                addDefaultPage: false,
+                objectsPerTick: 500
+            });
+            const compressedBuffer = Buffer.from(compressedPdfBytes);
+            // Calcular tamaño comprimido y porcentaje de reducción
+            const compressedSizeBytes = compressedBuffer.length;
+            const reductionPercent = ((originalSizeBytes - compressedSizeBytes) / originalSizeBytes * 100).toFixed(2);
+            if (compressedSizeBytes >= originalSizeBytes) {
+                res.setHeader('Content-Type', 'application/pdf');
+                res.setHeader('Content-Disposition', `attachment; filename=consentimiento_${Cid}.pdf`);
+                res.setHeader('Content-Length', originalSizeBytes);
+                return res.send(originalBuffer);
+            }
+            // Enviar el PDF comprimido
+            res.setHeader('Content-Type', 'application/pdf');
+            res.setHeader('Content-Disposition', `attachment; filename=consentimiento_${Cid}.pdf`);
+            res.setHeader('Content-Length', compressedSizeBytes);
+            res.setHeader('X-Compression-Rate', `${reductionPercent}%`);
+            return res.send(compressedBuffer);
+        }
+        catch (compressError) {
+            console.error('Error al comprimir PDF:', compressError);
+            // @ts-ignore
+            const fallbackBuffer = Buffer.from(resultado.consentimiento_info);
+            const fallbackSize = fallbackBuffer.length;
+            res.setHeader('Content-Type', 'application/pdf');
+            res.setHeader('Content-Disposition', `attachment; filename=consentimiento_${Cid}.pdf`);
+            res.setHeader('Content-Length', fallbackSize);
+            return res.send(fallbackBuffer);
+        }
     }
     catch (error) {
         console.error('Error al obtener el PDF de consentimiento:', error);
@@ -352,6 +387,58 @@ const getConsentimientoPDF = (req, res) => __awaiter(void 0, void 0, void 0, fun
 });
 exports.getConsentimientoPDF = getConsentimientoPDF;
 const getConsulta = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { Cid, numero_documento } = req.params;
+        // Asegurarnos que Cid es un número
+        const consultaId = parseInt(Cid, 10);
+        if (isNaN(consultaId)) {
+            return res.status(400).json({
+                message: "ID de consulta debe ser un número válido"
+            });
+        }
+        // Primero, obtener la consulta básica sin relaciones problemáticas
+        const consulta = yield consulta_1.Consulta.findByPk(consultaId, {
+            attributes: { exclude: ['consentimiento_info'] } // Excluir el PDF
+        });
+        if (!consulta) {
+            return res.status(404).json({
+                message: "Consulta no encontrada",
+                Cid
+            });
+        }
+        // VALIDACIÓN DE SEGURIDAD - Verificar que la consulta corresponde al paciente correcto
+        if (consulta.numero_documento !== numero_documento) {
+            return res.status(403).json({
+                message: "No tienes permiso para acceder a esta consulta",
+                error: "El número de documento no coincide con la consulta solicitada"
+            });
+        }
+        // Buscar el doctor usando el Uid de la consulta
+        const doctor = yield user_1.User.findByPk(consulta.Uid, {
+            attributes: ['Uid', 'nombre', 'rol', 'correo']
+        });
+        // Buscar el paciente usando el numero_documento de la consulta
+        const paciente = yield paciente_1.Paciente.findByPk(consulta.numero_documento, {
+            attributes: ['numero_documento', 'nombre', 'apellidos']
+        });
+        // Construir manualmente el resultado
+        const resultado = Object.assign(Object.assign({}, consulta.toJSON()), { tiene_consentimiento: consulta.consentimiento_check || false, doctor: doctor ? doctor.toJSON() : null, paciente: paciente ? paciente.toJSON() : null });
+        return res.status(200).json({
+            message: "Consulta obtenida correctamente",
+            data: resultado
+        });
+    }
+    catch (error) {
+        console.error('Error al obtener consulta:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+        return res.status(500).json({
+            message: 'Error interno del servidor al obtener consulta',
+            error: errorMessage
+        });
+    }
+});
+exports.getConsulta = getConsulta;
+const getConsultaid = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { Cid } = req.params;
         // Asegurarnos que Cid es un número
@@ -395,4 +482,4 @@ const getConsulta = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         });
     }
 });
-exports.getConsulta = getConsulta;
+exports.getConsultaid = getConsultaid;

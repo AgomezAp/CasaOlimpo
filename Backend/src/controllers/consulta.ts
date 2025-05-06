@@ -3,6 +3,9 @@ import { Consulta } from "../models/consulta";
 import { Paciente  } from "../models/paciente";
 import { User } from "../models/user";
 import multer from "multer";
+import { QueryTypes } from "sequelize";
+import sequelize from "../database/connection";
+import { PDFDocument } from "pdf-lib";
 const storage = multer.memoryStorage(); // Almacena en memoria
 const upload = multer({
     storage,
@@ -19,15 +22,11 @@ export const nuevaConsulta = async (req: Request, res: Response): Promise<any> =
             enfermedad_actual, 
             objetivos_terapia, 
             historia_problema, 
-            desarrollo, 
-            plan_terapeutico,
             tipo_diagnostico, 
-            analisis_diagnostico, 
             plan_tratamiento, 
             recomendaciones, 
             fecha,
-            // ELIMINAR correo de aquí, lo obtendremos del usuario
-            consentimiento_check, 
+            contraindicaciones,
             abierto,
             Uid
         } = req.body;
@@ -83,11 +82,9 @@ export const nuevaConsulta = async (req: Request, res: Response): Promise<any> =
             enfermedad_actual,
             objetivos_terapia,
             historia_problema,
-            desarrollo,
-            plan_terapeutico,
             tipo_diagnostico,
-            analisis_diagnostico,
             plan_tratamiento,
+            contraindicaciones,
             recomendaciones,
             fecha: fecha || new Date(),
             correo: correoDoctor, // USAR EL CORREO OBTENIDO DEL DOCTOR
@@ -357,37 +354,82 @@ export const cerrarConsulta = async (req: Request, res: Response): Promise<any> 
 export const getConsentimientoPDF = async (req: Request, res: Response): Promise<any> => {
     try {
         const { Cid } = req.params;
-        
         if (!Cid) {
             return res.status(400).json({
                 message: "Se requiere ID de consulta"
             });
         }
 
-        // Buscar la consulta pero solo obtener el campo consentimiento_info
-        const consulta = await Consulta.findByPk(Cid, {
-            attributes: ['consentimiento_info', 'consentimiento_check']
-        });
+        // Consulta SQL directa - mucho más rápida para BLOBs grandes
+        const [resultado] = await sequelize.query(
+            'SELECT "consentimiento_info", "consentimiento_check" FROM "Consulta" WHERE "Cid" = :Cid LIMIT 1',
+            {
+                replacements: { Cid },
+                type: QueryTypes.SELECT,
+                raw: true
+            }
+        );
 
-        if (!consulta) {
+        if (!resultado) {
             return res.status(404).json({
                 message: 'Consulta no encontrada',
                 Cid
             });
         }
 
-        // Verificar si existe el PDF
-        if (!consulta.consentimiento_info || !consulta.consentimiento_check) {
+        // @ts-ignore - El tipo de resultado puede variar
+        if (!resultado.consentimiento_info || !resultado.consentimiento_check) {
             return res.status(404).json({
                 message: 'Esta consulta no tiene un documento de consentimiento'
             });
         }
 
-        // Enviar el PDF como respuesta
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename=consentimiento_${Cid}.pdf`);
-        return res.send(consulta.consentimiento_info);
-
+        try {
+            // @ts-ignore - Obtener el PDF original
+            const originalBuffer = Buffer.from(resultado.consentimiento_info);
+            const originalSizeBytes = originalBuffer.length;
+            const pdfDoc = await PDFDocument.load(originalBuffer);
+            // Comprimir el PDF con opciones optimizadas
+            const compressedPdfBytes = await pdfDoc.save({
+                useObjectStreams: true,
+                addDefaultPage: false,
+                objectsPerTick: 500
+            });
+            
+            const compressedBuffer = Buffer.from(compressedPdfBytes);
+            
+            // Calcular tamaño comprimido y porcentaje de reducción
+            const compressedSizeBytes = compressedBuffer.length;
+            const reductionPercent = ((originalSizeBytes - compressedSizeBytes) / originalSizeBytes * 100).toFixed(2);
+            
+            if (compressedSizeBytes >= originalSizeBytes) {
+                res.setHeader('Content-Type', 'application/pdf');
+                res.setHeader('Content-Disposition', `attachment; filename=consentimiento_${Cid}.pdf`);
+                res.setHeader('Content-Length', originalSizeBytes);
+                return res.send(originalBuffer);
+            }
+            
+            // Enviar el PDF comprimido
+            res.setHeader('Content-Type', 'application/pdf');
+            res.setHeader('Content-Disposition', `attachment; filename=consentimiento_${Cid}.pdf`);
+            res.setHeader('Content-Length', compressedSizeBytes);
+            res.setHeader('X-Compression-Rate', `${reductionPercent}%`);
+            
+            return res.send(compressedBuffer);
+            
+        } catch (compressError) {
+            console.error('Error al comprimir PDF:', compressError);
+            // @ts-ignore
+            const fallbackBuffer = Buffer.from(resultado.consentimiento_info);
+            const fallbackSize = fallbackBuffer.length;
+            
+            res.setHeader('Content-Type', 'application/pdf');
+            res.setHeader('Content-Disposition', `attachment; filename=consentimiento_${Cid}.pdf`);
+            res.setHeader('Content-Length', fallbackSize);
+            
+            return res.send(fallbackBuffer);
+        }
+        
     } catch (error) {
         console.error('Error al obtener el PDF de consentimiento:', error);
         const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
@@ -396,10 +438,74 @@ export const getConsentimientoPDF = async (req: Request, res: Response): Promise
             error: errorMessage 
         });
     }
-}
+};
 export const getConsulta = async (req: Request, res: Response): Promise<any> => {
     try {
-        const { Cid } = req.params;
+        const { Cid, numero_documento } = req.params;
+        
+        // Asegurarnos que Cid es un número
+        const consultaId = parseInt(Cid, 10);
+        
+        if (isNaN(consultaId)) {
+            return res.status(400).json({
+                message: "ID de consulta debe ser un número válido"
+            });
+        }
+
+        // Primero, obtener la consulta básica sin relaciones problemáticas
+        const consulta = await Consulta.findByPk(consultaId, {
+            attributes: { exclude: ['consentimiento_info'] } // Excluir el PDF
+        });
+
+        if (!consulta) {
+            return res.status(404).json({
+                message: "Consulta no encontrada",
+                Cid
+            });
+        }
+
+        // VALIDACIÓN DE SEGURIDAD - Verificar que la consulta corresponde al paciente correcto
+        if (consulta.numero_documento !== numero_documento) {
+            return res.status(403).json({
+                message: "No tienes permiso para acceder a esta consulta",
+                error: "El número de documento no coincide con la consulta solicitada"
+            });
+        }
+
+        // Buscar el doctor usando el Uid de la consulta
+        const doctor = await User.findByPk(consulta.Uid, {
+            attributes: ['Uid', 'nombre', 'rol', 'correo']
+        });
+
+        // Buscar el paciente usando el numero_documento de la consulta
+        const paciente = await Paciente.findByPk(consulta.numero_documento, {
+            attributes: ['numero_documento', 'nombre', 'apellidos']
+        });
+
+        // Construir manualmente el resultado
+        const resultado = {
+            ...consulta.toJSON(),
+            tiene_consentimiento: consulta.consentimiento_check || false,
+            doctor: doctor ? doctor.toJSON() : null,
+            paciente: paciente ? paciente.toJSON() : null
+        };
+
+        return res.status(200).json({
+            message: "Consulta obtenida correctamente",
+            data: resultado
+        });
+    } catch (error) {
+        console.error('Error al obtener consulta:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+        return res.status(500).json({ 
+            message: 'Error interno del servidor al obtener consulta',
+            error: errorMessage 
+        });
+    }
+};
+export const getConsultaid = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { Cid} = req.params;
         
         // Asegurarnos que Cid es un número
         const consultaId = parseInt(Cid, 10);

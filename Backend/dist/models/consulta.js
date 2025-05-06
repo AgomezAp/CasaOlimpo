@@ -41,19 +41,11 @@ Consulta.init({
         type: sequelize_1.DataTypes.TEXT('medium'),
         allowNull: false
     },
-    desarrollo: {
-        type: sequelize_1.DataTypes.TEXT('medium'),
-        allowNull: false
-    },
-    plan_terapeutico: {
-        type: sequelize_1.DataTypes.TEXT('medium'),
-        allowNull: false
-    },
     tipo_diagnostico: {
         type: sequelize_1.DataTypes.TEXT('medium'),
         allowNull: false
     },
-    analisis_diagnostico: {
+    contraindicaciones: {
         type: sequelize_1.DataTypes.TEXT('medium'),
         allowNull: false
     },

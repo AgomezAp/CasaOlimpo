@@ -64,8 +64,8 @@ class Server{
         this.app.use(express.json())
         this.app.use(rateLimiter);
         this.app.use(cors({
-            origin: '*', // Permite todas las solicitudes de origen cruzado
-            methods: ['GET', 'POST', 'PUT', 'DELETE','PATCH'], // Métodos permitidos
+            origin: '*',
+            methods: ['GET', 'POST', 'PUT', 'DELETE','PATCH'],
             allowedHeaders: ['Content-Type', 'Authorization']
         }));
     }

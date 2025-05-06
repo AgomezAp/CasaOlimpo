@@ -105,8 +105,8 @@ class Server {
         this.app.use(express_1.default.json());
         this.app.use(rateLimiter_1.rateLimiter);
         this.app.use((0, cors_1.default)({
-            origin: '*', // Permite todas las solicitudes de origen cruzado
-            methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'], // Métodos permitidos
+            origin: '*',
+            methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
             allowedHeaders: ['Content-Type', 'Authorization']
         }));
     }

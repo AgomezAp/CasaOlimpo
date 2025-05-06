@@ -14,10 +14,8 @@ export class Consulta extends Model {
     public enfermedad_actual!: string;
     public objetivos_terapia!: string;
     public historia_problema!: string;
-    public desarrollo!: string;
-    public plan_terapeutico!: string;
     public tipo_diagnostico!: string;
-    public analisis_diagnostico!: string;
+    public contraindicaciones!: string;
     public plan_tratamiento!: string;
     public recomendaciones!: string;
     public numero_documento!: string;
@@ -59,19 +57,11 @@ Consulta.init(
             type: DataTypes.TEXT('medium'),
             allowNull: false
         },
-        desarrollo: {
-            type: DataTypes.TEXT('medium'),
-            allowNull: false
-        },
-        plan_terapeutico: {
-            type: DataTypes.TEXT('medium'),
-            allowNull: false
-        },
         tipo_diagnostico: {
             type: DataTypes.TEXT('medium'),
             allowNull: false
         },
-        analisis_diagnostico: {
+        contraindicaciones: {
             type: DataTypes.TEXT('medium'),
             allowNull: false
         },
