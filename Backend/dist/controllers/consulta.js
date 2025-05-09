@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getConsultaid = exports.getConsulta = exports.getConsentimientoPDF = exports.cerrarConsulta = exports.getConsultasDoctor = exports.getConsultasPorPaciente = exports.updateConsulta = exports.nuevaConsulta = exports.uploadConsentimiento = void 0;
+exports.verificarConsentimientoInformado = exports.subirConsentimientoInformado = exports.getConsultaid = exports.getConsulta = exports.getConsentimientoPDF = exports.cerrarConsulta = exports.getConsultasDoctor = exports.getConsultasPorPaciente = exports.updateConsulta = exports.nuevaConsulta = exports.uploadConsentimiento = void 0;
 const consulta_1 = require("../models/consulta");
 const paciente_1 = require("../models/paciente");
 const user_1 = require("../models/user");
@@ -483,3 +483,84 @@ const getConsultaid = (req, res) => __awaiter(void 0, void 0, void 0, function* 
     }
 });
 exports.getConsultaid = getConsultaid;
+const subirConsentimientoInformado = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { Cid } = req.params;
+        // Verificar que la consulta existe
+        const consulta = yield consulta_1.Consulta.findByPk(Cid);
+        if (!consulta) {
+            return res.status(404).json({
+                message: "Consulta no encontrada",
+                Cid
+            });
+        }
+        // Verificar que se ha subido un archivo
+        if (!req.file) {
+            return res.status(400).json({
+                message: "No se ha proporcionado el archivo de consentimiento informado"
+            });
+        }
+        // Actualizar la consulta con el consentimiento
+        yield consulta.update({
+            consentimiento_info: req.file.buffer,
+            consentimiento_check: true
+        });
+        return res.status(200).json({
+            message: "Consentimiento informado subido correctamente",
+            consulta: {
+                Cid: consulta.Cid,
+                tiene_consentimiento: true
+            }
+        });
+    }
+    catch (error) {
+        console.error('Error al subir consentimiento informado:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+        return res.status(500).json({
+            message: 'Error interno del servidor al subir consentimiento informado',
+            error: errorMessage
+        });
+    }
+});
+exports.subirConsentimientoInformado = subirConsentimientoInformado;
+const verificarConsentimientoInformado = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { Cid } = req.params;
+        if (!Cid) {
+            return res.status(400).json({
+                message: "Se requiere ID de consulta"
+            });
+        }
+        // Consulta optimizada - solo traemos los campos necesarios
+        const consulta = yield consulta_1.Consulta.findByPk(Cid, {
+            attributes: ['Cid', 'consentimiento_check', 'numero_documento']
+        });
+        if (!consulta) {
+            return res.status(404).json({
+                message: "Consulta no encontrada",
+                Cid
+            });
+        }
+        // Verificar si existe un consentimiento
+        const tieneConsentimiento = consulta.consentimiento_check || false;
+        return res.status(200).json({
+            message: tieneConsentimiento
+                ? "La consulta tiene un consentimiento informado asociado"
+                : "La consulta no tiene un consentimiento informado asociado",
+            data: {
+                Cid: consulta.Cid,
+                tieneConsentimiento,
+                numero_documento: consulta.numero_documento
+            }
+        });
+    }
+    catch (error) {
+        console.error('Error al verificar consentimiento informado:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+        return res.status(500).json({
+            message: 'Error interno del servidor al verificar consentimiento',
+            error: errorMessage
+        });
+    }
+});
+exports.verificarConsentimientoInformado = verificarConsentimientoInformado;

@@ -12,5 +12,7 @@ router.get('/api/paciente/:numero_documento/consulta/:Cid', consulta_1.getConsul
 // Ruta para consultas del doctor
 router.get('/api/doctor/:Uid/consultas', consulta_1.getConsultasDoctor);
 router.get('/api/consulta/:Cid', consulta_1.getConsultaid);
-router.get('/api/consulta/:Cid/consentimiento', consulta_1.getConsentimientoPDF);
+router.post('/api/consulta/:Cid/consentimiento', consulta_1.uploadConsentimiento, consulta_1.subirConsentimientoInformado);
+router.get('/api/consulta/:Cid/consentimiento/traer', consulta_1.getConsentimientoPDF);
+router.get('/api/consulta/:Cid/consentimiento/verificar', consulta_1.verificarConsentimientoInformado);
 exports.default = router;
