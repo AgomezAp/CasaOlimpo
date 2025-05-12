@@ -14,13 +14,15 @@ if (!SECRET_KEY) {
 /**
  * Cifra un texto usando AES
  */
-const encryptData = (text) => {
+const encryptData = (data) => {
     try {
-        if (!text)
+        // Si el dato es nulo o indefinido, devolver una cadena vacía
+        if (data === null || data === undefined)
             return '';
-        // Asegúrate de que sea una cadena de texto
-        const textString = String(text);
-        return crypto_js_1.default.AES.encrypt(textString, SECRET_KEY).toString();
+        // Convertir objetos o arrays a JSON string antes de encriptar
+        const stringData = typeof data !== 'string' ? JSON.stringify(data) : data;
+        // Encriptar la cadena
+        return crypto_js_1.default.AES.encrypt(stringData, SECRET_KEY).toString();
     }
     catch (error) {
         console.error("Error al encriptar datos:", error);
@@ -37,13 +39,22 @@ const decryptData = (ciphertext) => {
         if (!ciphertext || typeof ciphertext !== 'string' || ciphertext === '') {
             return '';
         }
-        // Comprobar si parece un texto cifrado por CryptoJS (debería empezar con algo como "U2Fsd...")
+        // Comprobar si parece un texto cifrado por CryptoJS
         if (!ciphertext.match(/^[A-Za-z0-9+/=]+$/)) {
             console.warn("Advertencia: El texto no parece estar cifrado correctamente:", ciphertext.substring(0, 20));
             return '';
         }
+        // Desencriptar el texto
         const bytes = crypto_js_1.default.AES.decrypt(ciphertext, SECRET_KEY);
-        return bytes.toString(crypto_js_1.default.enc.Utf8);
+        const decrypted = bytes.toString(crypto_js_1.default.enc.Utf8);
+        // Intentar parsear como JSON si es posible (para objetos y arrays)
+        try {
+            return JSON.parse(decrypted);
+        }
+        catch (_a) {
+            // Si no es JSON válido, devolver como string
+            return decrypted;
+        }
     }
     catch (error) {
         console.error("Error al desencriptar datos:", error);

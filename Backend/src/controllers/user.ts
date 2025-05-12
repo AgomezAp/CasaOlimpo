@@ -58,8 +58,6 @@ export const registrarUsuario = async (
 export const iniciarSesion = async (req: Request,res: Response): Promise<any> => {
   const { correo, contrasena } = req.body;
   
-  // Encripta el correo para buscarlo (igual que en el registro)
-  
   // Busca por el correo encriptado
   const user = await User.findOne({ where: { correo: correo } });
   

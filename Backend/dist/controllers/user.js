@@ -60,7 +60,6 @@ const registrarUsuario = (req, res) => __awaiter(void 0, void 0, void 0, functio
 exports.registrarUsuario = registrarUsuario;
 const iniciarSesion = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { correo, contrasena } = req.body;
-    // Encripta el correo para buscarlo (igual que en el registro)
     // Busca por el correo encriptado
     const user = yield user_1.User.findOne({ where: { correo: correo } });
     if (!user) {
