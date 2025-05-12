@@ -6,6 +6,37 @@ import multer from "multer";
 import { QueryTypes } from "sequelize";
 import sequelize from "../database/connection";
 import { PDFDocument } from "pdf-lib";
+import { decryptData, encryptData } from "./encriptado";
+
+function desencriptarConsulta(consulta: any): any {
+  if (!consulta) return consulta;
+  
+  // Lista de campos que NO requieren desencriptación
+  const camposNoEncriptados = [
+    'Cid', 'Uid', 'numero_documento', 'fecha', 'consentimiento_info',
+    'consentimiento_check', 'abierto', 'motivo_cierre', 'fecha_cierre', 
+    'cerrado_por', 'fecha_creacion', 'ultima_actualizacion', 'createdAt', 
+    'updatedAt', 'correo'
+  ];
+  
+  // Clonar el objeto para no modificar el original
+  const consultaDesencriptada = { ...consulta };
+  
+  // Desencriptar todos los campos excepto los que están en la lista de exclusión
+  Object.keys(consultaDesencriptada).forEach(campo => {
+    if (!camposNoEncriptados.includes(campo) && consultaDesencriptada[campo]) {
+      try {
+        consultaDesencriptada[campo] = decryptData(consultaDesencriptada[campo]);
+      } catch (error) {
+        console.error(`Error al desencriptar campo ${campo} en consulta:`, error);
+        // Mantener el valor original en caso de error
+      }
+    }
+  });
+  
+  return consultaDesencriptada;
+}
+
 const storage = multer.memoryStorage(); // Almacena en memoria
 const upload = multer({
     storage,
@@ -52,7 +83,7 @@ export const nuevaConsulta = async (req: Request, res: Response): Promise<any> =
             });
         }
         const correoDoctor = doctor.correo;
-        // NUEVO: Buscar consultas abiertas del paciente
+        // Buscar consultas abiertas del paciente
         const consultasAbiertas = await Consulta.findAll({
             where: { 
                 numero_documento,
@@ -60,7 +91,7 @@ export const nuevaConsulta = async (req: Request, res: Response): Promise<any> =
             }
         });
 
-        // NUEVO: Cerrar automáticamente todas las consultas abiertas
+        // Cerrar automáticamente todas las consultas abiertas
         if (consultasAbiertas.length > 0) {
             for (const consulta of consultasAbiertas) {
                 await consulta.update({
@@ -78,27 +109,31 @@ export const nuevaConsulta = async (req: Request, res: Response): Promise<any> =
         const nuevaConsulta = await Consulta.create({
             Uid,
             numero_documento,
-            motivo,
-            enfermedad_actual,
-            objetivos_terapia,
-            historia_problema,
-            tipo_diagnostico,
-            plan_tratamiento,
-            contraindicaciones,
-            recomendaciones,
+            motivo: encryptData(motivo),
+            enfermedad_actual: encryptData(enfermedad_actual),
+            objetivos_terapia: encryptData(objetivos_terapia),
+            historia_problema: encryptData(historia_problema),
+            tipo_diagnostico: encryptData(tipo_diagnostico),
+            plan_tratamiento: encryptData(plan_tratamiento),
+            contraindicaciones: encryptData(contraindicaciones),
+            recomendaciones: encryptData(recomendaciones),
             fecha: fecha || new Date(),
-            correo: correoDoctor, // USAR EL CORREO OBTENIDO DEL DOCTOR
+            correo: correoDoctor, 
             consentimiento_info: consentimientoArchivo,
             consentimiento_check: req.file ? true : false,
             abierto: abierto !== undefined ? abierto : true,
             fecha_creacion: new Date()
         });
 
+        // Desencriptar para la respuesta
+        const consultaJSON = nuevaConsulta.toJSON();
+        const consultaDesencriptada = desencriptarConsulta(consultaJSON);
+
         return res.status(201).json({
             message: "Consulta creada correctamente",
             consultasAnterioresCerradas: consultasAbiertas.length,
             consulta: {
-                ...nuevaConsulta.toJSON(),
+                ...consultaDesencriptada,
                 doctor: {
                     id: doctor.Uid,
                     nombre: doctor.nombre
@@ -157,13 +192,30 @@ export const updateConsulta = async (req: Request, res: Response): Promise<any> 
             });
         }
 
+        // Preparar datos para actualización con encriptación
+        const datosEncriptados: any = {};
+        
+        // Lista de campos que deben encriptarse
+        const camposAEncriptar = ['motivo', 'enfermedad_actual', 'objetivos_terapia', 
+            'historia_problema', 'tipo_diagnostico', 'plan_tratamiento', 
+            'contraindicaciones', 'recomendaciones'];
+        
+        // Procesar cada campo en la actualización
+        Object.keys(updatedData).forEach(campo => {
+            if (camposAEncriptar.includes(campo) && updatedData[campo] !== undefined) {
+                datosEncriptados[campo] = encryptData(updatedData[campo]);
+            } else {
+                datosEncriptados[campo] = updatedData[campo];
+            }
+        });
+
         // Registrar la última actualización
-        updatedData.ultima_actualizacion = new Date();
+        datosEncriptados.ultima_actualizacion = new Date();
 
         // Actualizar solo los campos proporcionados
-        await consulta.update(updatedData);
+        await consulta.update(datosEncriptados);
 
-        // CAMBIO AQUÍ: Obtener la consulta actualizada sin relaciones primero
+        // Obtener la consulta actualizada sin relaciones primero
         const consultaActualizada = await Consulta.findByPk(consultaId, {
             attributes: { exclude: ['consentimiento_info'] }
         });
@@ -184,9 +236,13 @@ export const updateConsulta = async (req: Request, res: Response): Promise<any> 
             attributes: ['numero_documento', 'nombre', 'apellidos']
         });
 
+        // Desencriptar la consulta
+        const consultaJSON = consultaActualizada.toJSON();
+        const consultaDesencriptada = desencriptarConsulta(consultaJSON);
+
         // Construir manualmente el resultado
         const resultado = {
-            ...consultaActualizada.toJSON(),
+            ...consultaDesencriptada,
             tiene_consentimiento: consultaActualizada.consentimiento_check || false,
             doctor: doctor ? doctor.toJSON() : null,
             paciente: paciente ? paciente.toJSON() : null
@@ -206,7 +262,7 @@ export const updateConsulta = async (req: Request, res: Response): Promise<any> 
             error: errorMessage 
         });
     }
-}
+};
 export const getConsultasPorPaciente = async (req: Request, res: Response): Promise<any> => {
     try {
         const { numero_documento } = req.params;
@@ -226,7 +282,7 @@ export const getConsultasPorPaciente = async (req: Request, res: Response): Prom
             order: [['fecha', 'DESC']]
         });
 
-        // Resto del código sin cambios...
+        // Procesar y desencriptar todas las consultas
         const resultado = [];
         
         for (const consulta of consultas) {
@@ -234,8 +290,12 @@ export const getConsultasPorPaciente = async (req: Request, res: Response): Prom
                 attributes: ['Uid', 'nombre', 'rol']
             });
             
+            // Desencriptar los campos de la consulta
+            const consultaJSON = consulta.toJSON();
+            const consultaDesencriptada = desencriptarConsulta(consultaJSON);
+            
             resultado.push({
-                ...consulta.toJSON(),
+                ...consultaDesencriptada,
                 doctor: doctor ? doctor.toJSON() : null
             });
         }
@@ -287,7 +347,15 @@ export const getConsultasDoctor = async (req: Request, res: Response): Promise<a
             order: [['fecha', 'DESC']]
         });
 
-        // Resto del código sin cambios...
+        // Desencriptar datos de todas las consultas
+        const consultasDesencriptadas = consultas.map(consulta => {
+            const consultaJSON = consulta.toJSON();
+            return {
+                ...desencriptarConsulta(consultaJSON),
+                paciente: consultaJSON.paciente // Mantener la relación con paciente
+            };
+        });
+
         return res.status(200).json({
             message: "Consultas obtenidas correctamente",
             total: consultas.length,
@@ -295,7 +363,7 @@ export const getConsultasDoctor = async (req: Request, res: Response): Promise<a
                 nombre: doctor.nombre,
                 rol: doctor.rol
             },
-            data: consultas
+            data: consultasDesencriptadas
         });
     } catch (error) {
         console.error('Error al obtener consultas del doctor:', error);
@@ -305,7 +373,7 @@ export const getConsultasDoctor = async (req: Request, res: Response): Promise<a
             error: errorMessage 
         });
     }
-}
+};
 export const cerrarConsulta = async (req: Request, res: Response): Promise<any> => {
     try {
         const { Cid } = req.params;
@@ -338,9 +406,13 @@ export const cerrarConsulta = async (req: Request, res: Response): Promise<any> 
             cerrado_por: Uid
         });
 
+        // Desencriptar para la respuesta
+        const consultaJSON = consulta.toJSON();
+        const consultaDesencriptada = desencriptarConsulta(consultaJSON);
+
         return res.status(200).json({
             message: "Consulta cerrada correctamente",
-            data: consulta
+            data: consultaDesencriptada
         });
     } catch (error) {
         console.error('Error al cerrar la consulta:', error);
@@ -350,7 +422,7 @@ export const cerrarConsulta = async (req: Request, res: Response): Promise<any> 
             error: errorMessage 
         });
     }
-}
+};
 export const getConsentimientoPDF = async (req: Request, res: Response): Promise<any> => {
     try {
         const { Cid } = req.params;
@@ -482,9 +554,13 @@ export const getConsulta = async (req: Request, res: Response): Promise<any> => 
             attributes: ['numero_documento', 'nombre', 'apellidos']
         });
 
+        // Desencriptar la consulta
+        const consultaJSON = consulta.toJSON();
+        const consultaDesencriptada = desencriptarConsulta(consultaJSON);
+
         // Construir manualmente el resultado
         const resultado = {
-            ...consulta.toJSON(),
+            ...consultaDesencriptada,
             tiene_consentimiento: consulta.consentimiento_check || false,
             doctor: doctor ? doctor.toJSON() : null,
             paciente: paciente ? paciente.toJSON() : null
@@ -505,7 +581,7 @@ export const getConsulta = async (req: Request, res: Response): Promise<any> => 
 };
 export const getConsultaid = async (req: Request, res: Response): Promise<any> => {
     try {
-        const { Cid} = req.params;
+        const { Cid } = req.params;
         
         // Asegurarnos que Cid es un número
         const consultaId = parseInt(Cid, 10);
@@ -538,9 +614,13 @@ export const getConsultaid = async (req: Request, res: Response): Promise<any> =
             attributes: ['numero_documento', 'nombre', 'apellidos']
         });
 
+        // Desencriptar la consulta
+        const consultaJSON = consulta.toJSON();
+        const consultaDesencriptada = desencriptarConsulta(consultaJSON);
+
         // Construir manualmente el resultado
         const resultado = {
-            ...consulta.toJSON(),
+            ...consultaDesencriptada,
             tiene_consentimiento: consulta.consentimiento_check || false,
             doctor: doctor ? doctor.toJSON() : null,
             paciente: paciente ? paciente.toJSON() : null
@@ -555,6 +635,92 @@ export const getConsultaid = async (req: Request, res: Response): Promise<any> =
         const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
         return res.status(500).json({ 
             message: 'Error interno del servidor al obtener consulta',
+            error: errorMessage 
+        });
+    }
+};
+export const subirConsentimientoInformado = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { Cid } = req.params;
+        
+        // Verificar que la consulta existe
+        const consulta = await Consulta.findByPk(Cid);
+        if (!consulta) {
+            return res.status(404).json({
+                message: "Consulta no encontrada",
+                Cid
+            });
+        }
+
+        // Verificar que se ha subido un archivo
+        if (!req.file) {
+            return res.status(400).json({
+                message: "No se ha proporcionado el archivo de consentimiento informado"
+            });
+        }
+
+        // Actualizar la consulta con el consentimiento
+        await consulta.update({
+            consentimiento_info: req.file.buffer,
+            consentimiento_check: true
+        });
+
+        return res.status(200).json({
+            message: "Consentimiento informado subido correctamente",
+            consulta: {
+                Cid: consulta.Cid,
+                tiene_consentimiento: true
+            }
+        });
+    } catch (error) {
+        console.error('Error al subir consentimiento informado:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+        return res.status(500).json({ 
+            message: 'Error interno del servidor al subir consentimiento informado',
+            error: errorMessage 
+        });
+    }
+};
+export const verificarConsentimientoInformado = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { Cid } = req.params;
+        
+        if (!Cid) {
+            return res.status(400).json({
+                message: "Se requiere ID de consulta"
+            });
+        }
+
+        // Consulta optimizada - solo traemos los campos necesarios
+        const consulta = await Consulta.findByPk(Cid, {
+            attributes: ['Cid', 'consentimiento_check', 'numero_documento']
+        });
+
+        if (!consulta) {
+            return res.status(404).json({
+                message: "Consulta no encontrada",
+                Cid
+            });
+        }
+
+        // Verificar si existe un consentimiento
+        const tieneConsentimiento = consulta.consentimiento_check || false;
+        
+        return res.status(200).json({
+            message: tieneConsentimiento 
+                ? "La consulta tiene un consentimiento informado asociado" 
+                : "La consulta no tiene un consentimiento informado asociado",
+            data: {
+                Cid: consulta.Cid,
+                tieneConsentimiento,
+                numero_documento: consulta.numero_documento
+            }
+        });
+    } catch (error) {
+        console.error('Error al verificar consentimiento informado:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+        return res.status(500).json({ 
+            message: 'Error interno del servidor al verificar consentimiento',
             error: errorMessage 
         });
     }

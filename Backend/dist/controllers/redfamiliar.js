@@ -13,6 +13,7 @@ exports.establecerResponsable = exports.eliminarMiembroRedFamiliar = exports.act
 const redfamiliar_1 = require("../models/redfamiliar");
 const paciente_1 = require("../models/paciente");
 const sequelize_1 = require("sequelize");
+const encriptado_1 = require("./encriptado");
 /**
  * Crea un nuevo miembro de la red familiar para un paciente
  */
@@ -62,17 +63,18 @@ const crearMiembroRedFamiliar = (req, res) => __awaiter(void 0, void 0, void 0, 
         }
         // Crear el miembro de la red familiar
         const nuevoMiembro = yield redfamiliar_1.RedFamiliar.create({
-            nombre,
-            apellido,
-            telefono,
-            correo,
+            nombre: (0, encriptado_1.encryptData)(nombre),
+            apellido: (0, encriptado_1.encryptData)(apellido),
+            telefono: (0, encriptado_1.encryptData)(telefono),
+            correo: (0, encriptado_1.encryptData)(correo),
             numero_documento: documento_miembro,
             numero_documento_familiar: numero_documento,
             es_responsable: esResponsable
         });
+        const miembroDesencriptado = desencriptarMiembroRedFamiliar(nuevoMiembro.toJSON());
         return res.status(201).json({
             message: "Miembro de red familiar creado correctamente",
-            data: nuevoMiembro
+            data: miembroDesencriptado
         });
     }
     catch (error) {
@@ -105,15 +107,22 @@ const obtenerRedFamiliar = (req, res) => __awaiter(void 0, void 0, void 0, funct
                 ['nombre', 'ASC'] // Luego ordenados alfabéticamente
             ]
         });
+        // Desencriptar los datos de cada miembro
+        const miembrosDesencriptados = miembros.map(miembro => desencriptarMiembroRedFamiliar(miembro.toJSON()));
+        // Si paciente.nombre y paciente.apellidos están encriptados, desencriptarlos
+        // (dependiendo de cómo esté implementado el modelo Paciente)
+        const pacienteInfo = {
+            numero_documento: paciente.numero_documento,
+            nombre: typeof paciente.nombre === 'string' && paciente.nombre.match(/^[A-Za-z0-9+/=]+$/)
+                ? (0, encriptado_1.decryptData)(paciente.nombre) : paciente.nombre,
+            apellidos: typeof paciente.apellidos === 'string' && paciente.apellidos.match(/^[A-Za-z0-9+/=]+$/)
+                ? (0, encriptado_1.decryptData)(paciente.apellidos) : paciente.apellidos
+        };
         return res.status(200).json({
             message: "Red familiar obtenida correctamente",
             data: {
-                paciente: {
-                    numero_documento: paciente.numero_documento,
-                    nombre: paciente.nombre,
-                    apellidos: paciente.apellidos
-                },
-                miembros_red_familiar: miembros
+                paciente: pacienteInfo,
+                miembros_red_familiar: miembrosDesencriptados
             }
         });
     }
@@ -169,11 +178,36 @@ const actualizarMiembroRedFamiliar = (req, res) => __awaiter(void 0, void 0, voi
                 }
             }
         }
-        // Actualizar el miembro
-        yield miembro.update(datosActualizados);
+        // Preparar datos encriptados para actualizar
+        const datosEncriptados = {};
+        // Lista de campos a encriptar
+        const camposAEncriptar = ['nombre', 'apellido', 'telefono', 'correo'];
+        // Procesar cada campo de entrada
+        Object.keys(datosActualizados).forEach(campo => {
+            if (camposAEncriptar.includes(campo) && datosActualizados[campo] !== undefined) {
+                // Encriptar los campos sensibles
+                datosEncriptados[campo] = (0, encriptado_1.encryptData)(datosActualizados[campo]);
+            }
+            else {
+                // Mantener otros campos sin encriptar
+                datosEncriptados[campo] = datosActualizados[campo];
+            }
+        });
+        // Actualizar el miembro con datos encriptados
+        yield miembro.update(datosEncriptados);
+        // Obtener el miembro actualizado
+        const miembroActualizado = yield redfamiliar_1.RedFamiliar.findByPk(id);
+        // Verificar que existe (SOLUCIÓN AL ERROR)
+        if (!miembroActualizado) {
+            return res.status(404).json({
+                message: "Error: No se pudo obtener el miembro actualizado"
+            });
+        }
+        // Desencriptar para la respuesta
+        const miembroDesencriptado = desencriptarMiembroRedFamiliar(miembroActualizado.toJSON());
         return res.status(200).json({
             message: "Miembro de red familiar actualizado correctamente",
-            data: miembro
+            data: miembroDesencriptado
         });
     }
     catch (error) {
@@ -263,12 +297,23 @@ const establecerResponsable = (req, res) => __awaiter(void 0, void 0, void 0, fu
                 Nid: { [sequelize_1.Op.ne]: Nid }
             }
         });
-        // Establecer este miembro como responsable
+        // REEMPLAZAR DESDE AQUÍ
         miembro.es_responsable = true;
         yield miembro.save();
+        // Obtener miembro actualizado (para asegurar datos frescos)
+        const miembroActualizado = yield redfamiliar_1.RedFamiliar.findByPk(Nid);
+        // Verificar que existe
+        if (!miembroActualizado) {
+            return res.status(404).json({
+                message: "Error: No se pudo obtener el miembro actualizado"
+            });
+        }
+        // Desencriptar datos para la respuesta (ahora TypeScript sabe que no es null)
+        const miembroDesencriptado = desencriptarMiembroRedFamiliar(miembroActualizado.toJSON());
+        // HASTA AQUÍ
         return res.status(200).json({
             message: "Responsable legal establecido correctamente",
-            data: miembro
+            data: miembroDesencriptado
         });
     }
     catch (error) {
@@ -280,3 +325,27 @@ const establecerResponsable = (req, res) => __awaiter(void 0, void 0, void 0, fu
     }
 });
 exports.establecerResponsable = establecerResponsable;
+function desencriptarMiembroRedFamiliar(miembro) {
+    // Si es null o undefined, retornar el mismo valor
+    if (!miembro)
+        return miembro;
+    // Lista de campos que NO necesitan desencriptación
+    const camposNoEncriptados = [
+        'Nid', 'numero_documento', 'numero_documento_familiar',
+        'es_responsable', 'createdAt', 'updatedAt'
+    ];
+    // Clonar el objeto para no modificar el original
+    const miembroDesencriptado = Object.assign({}, miembro);
+    // Desencriptar todos los campos excepto los que están en la lista
+    Object.keys(miembroDesencriptado).forEach(campo => {
+        if (!camposNoEncriptados.includes(campo) && miembroDesencriptado[campo]) {
+            try {
+                miembroDesencriptado[campo] = (0, encriptado_1.decryptData)(miembroDesencriptado[campo]);
+            }
+            catch (error) {
+                console.error(`Error al desencriptar campo ${campo} en miembro de red familiar:`, error);
+            }
+        }
+    });
+    return miembroDesencriptado;
+}

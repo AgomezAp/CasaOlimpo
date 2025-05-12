@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getConsultaid = exports.getConsulta = exports.getConsentimientoPDF = exports.cerrarConsulta = exports.getConsultasDoctor = exports.getConsultasPorPaciente = exports.updateConsulta = exports.nuevaConsulta = exports.uploadConsentimiento = void 0;
+exports.verificarConsentimientoInformado = exports.subirConsentimientoInformado = exports.getConsultaid = exports.getConsulta = exports.getConsentimientoPDF = exports.cerrarConsulta = exports.getConsultasDoctor = exports.getConsultasPorPaciente = exports.updateConsulta = exports.nuevaConsulta = exports.uploadConsentimiento = void 0;
 const consulta_1 = require("../models/consulta");
 const paciente_1 = require("../models/paciente");
 const user_1 = require("../models/user");
@@ -20,6 +20,33 @@ const multer_1 = __importDefault(require("multer"));
 const sequelize_1 = require("sequelize");
 const connection_1 = __importDefault(require("../database/connection"));
 const pdf_lib_1 = require("pdf-lib");
+const encriptado_1 = require("./encriptado");
+function desencriptarConsulta(consulta) {
+    if (!consulta)
+        return consulta;
+    // Lista de campos que NO requieren desencriptación
+    const camposNoEncriptados = [
+        'Cid', 'Uid', 'numero_documento', 'fecha', 'consentimiento_info',
+        'consentimiento_check', 'abierto', 'motivo_cierre', 'fecha_cierre',
+        'cerrado_por', 'fecha_creacion', 'ultima_actualizacion', 'createdAt',
+        'updatedAt', 'correo'
+    ];
+    // Clonar el objeto para no modificar el original
+    const consultaDesencriptada = Object.assign({}, consulta);
+    // Desencriptar todos los campos excepto los que están en la lista de exclusión
+    Object.keys(consultaDesencriptada).forEach(campo => {
+        if (!camposNoEncriptados.includes(campo) && consultaDesencriptada[campo]) {
+            try {
+                consultaDesencriptada[campo] = (0, encriptado_1.decryptData)(consultaDesencriptada[campo]);
+            }
+            catch (error) {
+                console.error(`Error al desencriptar campo ${campo} en consulta:`, error);
+                // Mantener el valor original en caso de error
+            }
+        }
+    });
+    return consultaDesencriptada;
+}
 const storage = multer_1.default.memoryStorage(); // Almacena en memoria
 const upload = (0, multer_1.default)({
     storage,
@@ -52,14 +79,14 @@ const nuevaConsulta = (req, res) => __awaiter(void 0, void 0, void 0, function* 
             });
         }
         const correoDoctor = doctor.correo;
-        // NUEVO: Buscar consultas abiertas del paciente
+        // Buscar consultas abiertas del paciente
         const consultasAbiertas = yield consulta_1.Consulta.findAll({
             where: {
                 numero_documento,
                 abierto: true
             }
         });
-        // NUEVO: Cerrar automáticamente todas las consultas abiertas
+        // Cerrar automáticamente todas las consultas abiertas
         if (consultasAbiertas.length > 0) {
             for (const consulta of consultasAbiertas) {
                 yield consulta.update({
@@ -75,25 +102,28 @@ const nuevaConsulta = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         const nuevaConsulta = yield consulta_1.Consulta.create({
             Uid,
             numero_documento,
-            motivo,
-            enfermedad_actual,
-            objetivos_terapia,
-            historia_problema,
-            tipo_diagnostico,
-            plan_tratamiento,
-            contraindicaciones,
-            recomendaciones,
+            motivo: (0, encriptado_1.encryptData)(motivo),
+            enfermedad_actual: (0, encriptado_1.encryptData)(enfermedad_actual),
+            objetivos_terapia: (0, encriptado_1.encryptData)(objetivos_terapia),
+            historia_problema: (0, encriptado_1.encryptData)(historia_problema),
+            tipo_diagnostico: (0, encriptado_1.encryptData)(tipo_diagnostico),
+            plan_tratamiento: (0, encriptado_1.encryptData)(plan_tratamiento),
+            contraindicaciones: (0, encriptado_1.encryptData)(contraindicaciones),
+            recomendaciones: (0, encriptado_1.encryptData)(recomendaciones),
             fecha: fecha || new Date(),
-            correo: correoDoctor, // USAR EL CORREO OBTENIDO DEL DOCTOR
+            correo: correoDoctor,
             consentimiento_info: consentimientoArchivo,
             consentimiento_check: req.file ? true : false,
             abierto: abierto !== undefined ? abierto : true,
             fecha_creacion: new Date()
         });
+        // Desencriptar para la respuesta
+        const consultaJSON = nuevaConsulta.toJSON();
+        const consultaDesencriptada = desencriptarConsulta(consultaJSON);
         return res.status(201).json({
             message: "Consulta creada correctamente",
             consultasAnterioresCerradas: consultasAbiertas.length,
-            consulta: Object.assign(Object.assign({}, nuevaConsulta.toJSON()), { doctor: {
+            consulta: Object.assign(Object.assign({}, consultaDesencriptada), { doctor: {
                     id: doctor.Uid,
                     nombre: doctor.nombre
                 }, paciente: {
@@ -143,11 +173,26 @@ const updateConsulta = (req, res) => __awaiter(void 0, void 0, void 0, function*
                 message: "La consulta ya ha sido cerrada y no se puede actualizar"
             });
         }
+        // Preparar datos para actualización con encriptación
+        const datosEncriptados = {};
+        // Lista de campos que deben encriptarse
+        const camposAEncriptar = ['motivo', 'enfermedad_actual', 'objetivos_terapia',
+            'historia_problema', 'tipo_diagnostico', 'plan_tratamiento',
+            'contraindicaciones', 'recomendaciones'];
+        // Procesar cada campo en la actualización
+        Object.keys(updatedData).forEach(campo => {
+            if (camposAEncriptar.includes(campo) && updatedData[campo] !== undefined) {
+                datosEncriptados[campo] = (0, encriptado_1.encryptData)(updatedData[campo]);
+            }
+            else {
+                datosEncriptados[campo] = updatedData[campo];
+            }
+        });
         // Registrar la última actualización
-        updatedData.ultima_actualizacion = new Date();
+        datosEncriptados.ultima_actualizacion = new Date();
         // Actualizar solo los campos proporcionados
-        yield consulta.update(updatedData);
-        // CAMBIO AQUÍ: Obtener la consulta actualizada sin relaciones primero
+        yield consulta.update(datosEncriptados);
+        // Obtener la consulta actualizada sin relaciones primero
         const consultaActualizada = yield consulta_1.Consulta.findByPk(consultaId, {
             attributes: { exclude: ['consentimiento_info'] }
         });
@@ -164,8 +209,11 @@ const updateConsulta = (req, res) => __awaiter(void 0, void 0, void 0, function*
         const paciente = yield paciente_1.Paciente.findByPk(consultaActualizada.numero_documento, {
             attributes: ['numero_documento', 'nombre', 'apellidos']
         });
+        // Desencriptar la consulta
+        const consultaJSON = consultaActualizada.toJSON();
+        const consultaDesencriptada = desencriptarConsulta(consultaJSON);
         // Construir manualmente el resultado
-        const resultado = Object.assign(Object.assign({}, consultaActualizada.toJSON()), { tiene_consentimiento: consultaActualizada.consentimiento_check || false, doctor: doctor ? doctor.toJSON() : null, paciente: paciente ? paciente.toJSON() : null });
+        const resultado = Object.assign(Object.assign({}, consultaDesencriptada), { tiene_consentimiento: consultaActualizada.consentimiento_check || false, doctor: doctor ? doctor.toJSON() : null, paciente: paciente ? paciente.toJSON() : null });
         // Responder con éxito
         return res.status(200).json({
             message: "Consulta actualizada correctamente",
@@ -198,13 +246,16 @@ const getConsultasPorPaciente = (req, res) => __awaiter(void 0, void 0, void 0, 
             attributes: { exclude: ['consentimiento_info'] }, // Excluir el PDF
             order: [['fecha', 'DESC']]
         });
-        // Resto del código sin cambios...
+        // Procesar y desencriptar todas las consultas
         const resultado = [];
         for (const consulta of consultas) {
             const doctor = yield user_1.User.findByPk(consulta.Uid, {
                 attributes: ['Uid', 'nombre', 'rol']
             });
-            resultado.push(Object.assign(Object.assign({}, consulta.toJSON()), { doctor: doctor ? doctor.toJSON() : null }));
+            // Desencriptar los campos de la consulta
+            const consultaJSON = consulta.toJSON();
+            const consultaDesencriptada = desencriptarConsulta(consultaJSON);
+            resultado.push(Object.assign(Object.assign({}, consultaDesencriptada), { doctor: doctor ? doctor.toJSON() : null }));
         }
         return res.status(200).json({
             message: "Consultas obtenidas correctamente",
@@ -249,7 +300,12 @@ const getConsultasDoctor = (req, res) => __awaiter(void 0, void 0, void 0, funct
             ],
             order: [['fecha', 'DESC']]
         });
-        // Resto del código sin cambios...
+        // Desencriptar datos de todas las consultas
+        const consultasDesencriptadas = consultas.map(consulta => {
+            const consultaJSON = consulta.toJSON();
+            return Object.assign(Object.assign({}, desencriptarConsulta(consultaJSON)), { paciente: consultaJSON.paciente // Mantener la relación con paciente
+             });
+        });
         return res.status(200).json({
             message: "Consultas obtenidas correctamente",
             total: consultas.length,
@@ -257,7 +313,7 @@ const getConsultasDoctor = (req, res) => __awaiter(void 0, void 0, void 0, funct
                 nombre: doctor.nombre,
                 rol: doctor.rol
             },
-            data: consultas
+            data: consultasDesencriptadas
         });
     }
     catch (error) {
@@ -296,9 +352,12 @@ const cerrarConsulta = (req, res) => __awaiter(void 0, void 0, void 0, function*
             fecha_cierre: new Date(),
             cerrado_por: Uid
         });
+        // Desencriptar para la respuesta
+        const consultaJSON = consulta.toJSON();
+        const consultaDesencriptada = desencriptarConsulta(consultaJSON);
         return res.status(200).json({
             message: "Consulta cerrada correctamente",
-            data: consulta
+            data: consultaDesencriptada
         });
     }
     catch (error) {
@@ -421,8 +480,11 @@ const getConsulta = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         const paciente = yield paciente_1.Paciente.findByPk(consulta.numero_documento, {
             attributes: ['numero_documento', 'nombre', 'apellidos']
         });
+        // Desencriptar la consulta
+        const consultaJSON = consulta.toJSON();
+        const consultaDesencriptada = desencriptarConsulta(consultaJSON);
         // Construir manualmente el resultado
-        const resultado = Object.assign(Object.assign({}, consulta.toJSON()), { tiene_consentimiento: consulta.consentimiento_check || false, doctor: doctor ? doctor.toJSON() : null, paciente: paciente ? paciente.toJSON() : null });
+        const resultado = Object.assign(Object.assign({}, consultaDesencriptada), { tiene_consentimiento: consulta.consentimiento_check || false, doctor: doctor ? doctor.toJSON() : null, paciente: paciente ? paciente.toJSON() : null });
         return res.status(200).json({
             message: "Consulta obtenida correctamente",
             data: resultado
@@ -466,8 +528,11 @@ const getConsultaid = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         const paciente = yield paciente_1.Paciente.findByPk(consulta.numero_documento, {
             attributes: ['numero_documento', 'nombre', 'apellidos']
         });
+        // Desencriptar la consulta
+        const consultaJSON = consulta.toJSON();
+        const consultaDesencriptada = desencriptarConsulta(consultaJSON);
         // Construir manualmente el resultado
-        const resultado = Object.assign(Object.assign({}, consulta.toJSON()), { tiene_consentimiento: consulta.consentimiento_check || false, doctor: doctor ? doctor.toJSON() : null, paciente: paciente ? paciente.toJSON() : null });
+        const resultado = Object.assign(Object.assign({}, consultaDesencriptada), { tiene_consentimiento: consulta.consentimiento_check || false, doctor: doctor ? doctor.toJSON() : null, paciente: paciente ? paciente.toJSON() : null });
         return res.status(200).json({
             message: "Consulta obtenida correctamente",
             data: resultado
@@ -483,3 +548,84 @@ const getConsultaid = (req, res) => __awaiter(void 0, void 0, void 0, function* 
     }
 });
 exports.getConsultaid = getConsultaid;
+const subirConsentimientoInformado = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { Cid } = req.params;
+        // Verificar que la consulta existe
+        const consulta = yield consulta_1.Consulta.findByPk(Cid);
+        if (!consulta) {
+            return res.status(404).json({
+                message: "Consulta no encontrada",
+                Cid
+            });
+        }
+        // Verificar que se ha subido un archivo
+        if (!req.file) {
+            return res.status(400).json({
+                message: "No se ha proporcionado el archivo de consentimiento informado"
+            });
+        }
+        // Actualizar la consulta con el consentimiento
+        yield consulta.update({
+            consentimiento_info: req.file.buffer,
+            consentimiento_check: true
+        });
+        return res.status(200).json({
+            message: "Consentimiento informado subido correctamente",
+            consulta: {
+                Cid: consulta.Cid,
+                tiene_consentimiento: true
+            }
+        });
+    }
+    catch (error) {
+        console.error('Error al subir consentimiento informado:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+        return res.status(500).json({
+            message: 'Error interno del servidor al subir consentimiento informado',
+            error: errorMessage
+        });
+    }
+});
+exports.subirConsentimientoInformado = subirConsentimientoInformado;
+const verificarConsentimientoInformado = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { Cid } = req.params;
+        if (!Cid) {
+            return res.status(400).json({
+                message: "Se requiere ID de consulta"
+            });
+        }
+        // Consulta optimizada - solo traemos los campos necesarios
+        const consulta = yield consulta_1.Consulta.findByPk(Cid, {
+            attributes: ['Cid', 'consentimiento_check', 'numero_documento']
+        });
+        if (!consulta) {
+            return res.status(404).json({
+                message: "Consulta no encontrada",
+                Cid
+            });
+        }
+        // Verificar si existe un consentimiento
+        const tieneConsentimiento = consulta.consentimiento_check || false;
+        return res.status(200).json({
+            message: tieneConsentimiento
+                ? "La consulta tiene un consentimiento informado asociado"
+                : "La consulta no tiene un consentimiento informado asociado",
+            data: {
+                Cid: consulta.Cid,
+                tieneConsentimiento,
+                numero_documento: consulta.numero_documento
+            }
+        });
+    }
+    catch (error) {
+        console.error('Error al verificar consentimiento informado:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+        return res.status(500).json({
+            message: 'Error interno del servidor al verificar consentimiento',
+            error: errorMessage
+        });
+    }
+});
+exports.verificarConsentimientoInformado = verificarConsentimientoInformado;
