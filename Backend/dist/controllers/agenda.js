@@ -20,6 +20,35 @@ const dayjs_1 = __importDefault(require("dayjs"));
 const sequelize_1 = require("sequelize"); // Importar operadores de Sequelize
 const connection_1 = __importDefault(require("../database/connection"));
 const agendaNoRegistrados_1 = require("../models/agendaNoRegistrados");
+const encriptado_1 = require("./encriptado");
+const paciente_2 = require("./paciente");
+function desencriptarAgenda(agenda) {
+    if (!agenda)
+        return agenda;
+    // Lista de campos que NO requieren desencriptación
+    const camposSinDesencriptar = [
+        'Aid', 'fecha_cita', 'hora_cita', 'estado', 'correo',
+        'numero_documento', 'createdAt', 'updatedAt', 'duracion'
+    ];
+    // Clonar el objeto para no modificar el original
+    const agendaDesencriptada = Object.assign({}, agenda);
+    // Desencriptar todos los campos excepto los que están en la lista de exclusión
+    Object.keys(agendaDesencriptada).forEach(campo => {
+        if (!camposSinDesencriptar.includes(campo) && agendaDesencriptada[campo]) {
+            try {
+                // Verificar si parece un texto encriptado
+                if (typeof agendaDesencriptada[campo] === 'string' &&
+                    agendaDesencriptada[campo].match(/^[A-Za-z0-9+/=]{20,}$/)) {
+                    agendaDesencriptada[campo] = (0, encriptado_1.decryptData)(agendaDesencriptada[campo]);
+                }
+            }
+            catch (error) {
+                console.error(`Error al desencriptar campo ${campo} en agenda:`, error);
+            }
+        }
+    });
+    return agendaDesencriptada;
+}
 const crearCita = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { correo, numero_documento, fecha_cita, hora_cita, estado, descripcion, telefono, duracion, } = req.body;
     try {
@@ -203,9 +232,17 @@ const actualizarCita = (req, res) => __awaiter(void 0, void 0, void 0, function*
             }
             actualizaciones.estado = datosActualizados.estado;
         }
-        // Descripción
+        // Descripción - Encriptar al actualizar
         if (datosActualizados.descripcion !== undefined) {
-            actualizaciones.descripcion = datosActualizados.descripcion;
+            actualizaciones.descripcion = (0, encriptado_1.encryptData)(datosActualizados.descripcion);
+        }
+        // Teléfono - Encriptar al actualizar
+        if (datosActualizados.telefono !== undefined) {
+            actualizaciones.telefono = (0, encriptado_1.encryptData)(datosActualizados.telefono);
+        }
+        // Duración
+        if (datosActualizados.duracion !== undefined) {
+            actualizaciones.duracion = datosActualizados.duracion;
         }
         // 4. Si no hay nada que actualizar, retornar error
         if (Object.keys(actualizaciones).length === 0) {
@@ -283,9 +320,24 @@ const actualizarCita = (req, res) => __awaiter(void 0, void 0, void 0, function*
         }
         // 6. Actualizar la cita con los campos proporcionados
         yield cita.update(actualizaciones);
+        // 7. Obtener la cita actualizada para desencriptarla
+        const citaActualizada = yield agenda_1.Agenda.findByPk(Aid, {
+            include: [
+                { model: user_1.User, as: "doctor" },
+                { model: paciente_1.Paciente, as: "paciente" }
+            ]
+        });
+        if (!citaActualizada) {
+            return res.status(404).json({
+                message: "Error al obtener la cita actualizada"
+            });
+        }
+        // 8. Desencriptar datos para la respuesta
+        const citaJSON = citaActualizada.toJSON();
+        const citaDesencriptada = desencriptarAgenda(citaJSON);
         return res.status(200).json({
             message: "Cita actualizada correctamente",
-            data: cita,
+            data: citaDesencriptada,
         });
     }
     catch (err) {
@@ -334,9 +386,19 @@ const obtenerCitas = (req, res) => __awaiter(void 0, void 0, void 0, function* (
                 { model: paciente_1.Paciente, as: "paciente" },
             ],
         });
+        // Desencriptar los datos de todas las citas
+        const citasDesencriptadas = citas.map(cita => {
+            const citaJSON = cita.toJSON();
+            const citaDesencriptada = desencriptarAgenda(citaJSON);
+            // Si el paciente tiene datos encriptados y existe la función para desencriptarlos
+            if (citaDesencriptada.paciente && typeof paciente_2.desencriptarPacienteCompleto === 'function') {
+                citaDesencriptada.paciente = (0, paciente_2.desencriptarPacienteCompleto)(citaDesencriptada.paciente);
+            }
+            return citaDesencriptada;
+        });
         return res.status(200).json({
             message: "Citas obtenidas correctamente",
-            data: citas,
+            data: citasDesencriptadas,
         });
     }
     catch (err) {
@@ -360,9 +422,19 @@ const obtenerCitasPorDoctor = (req, res) => __awaiter(void 0, void 0, void 0, fu
                 { model: paciente_1.Paciente, as: "paciente" },
             ],
         });
+        // Desencriptar los datos de todas las citas
+        const citasDesencriptadas = citas.map(cita => {
+            const citaJSON = cita.toJSON();
+            const citaDesencriptada = desencriptarAgenda(citaJSON);
+            // Si hay datos de paciente disponibles
+            if (citaDesencriptada.paciente && typeof paciente_2.desencriptarPacienteCompleto === 'function') {
+                citaDesencriptada.paciente = (0, paciente_2.desencriptarPacienteCompleto)(citaDesencriptada.paciente);
+            }
+            return citaDesencriptada;
+        });
         return res.status(200).json({
             message: "Citas obtenidas correctamente",
-            data: citas,
+            data: citasDesencriptadas,
         });
     }
     catch (err) {
@@ -389,7 +461,7 @@ const obtenerCitasPorPaciente = (req, res) => __awaiter(void 0, void 0, void 0, 
             where: {
                 numero_documento
             },
-            attributes: ['Aid', 'fecha_cita', 'hora_cita', 'estado', 'descripcion', 'duracion'],
+            attributes: ['Aid', 'fecha_cita', 'hora_cita', 'estado', 'descripcion', 'telefono', 'duracion'],
             include: [
                 {
                     model: user_1.User,
@@ -408,10 +480,12 @@ const obtenerCitasPorPaciente = (req, res) => __awaiter(void 0, void 0, void 0, 
                 data: []
             });
         }
+        // Desencriptar cada cita antes de enviarla
+        const citasDesencriptadas = citas.map(cita => desencriptarAgenda(cita.toJSON()));
         return res.status(200).json({
             message: "Citas del paciente obtenidas correctamente",
             total_citas: citas.length,
-            data: citas
+            data: citasDesencriptadas
         });
     }
     catch (err) {

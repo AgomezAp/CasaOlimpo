@@ -13,6 +13,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.transferirPaciente = exports.obtenerPacientesPorDoctor = exports.actualizarDatosPaciente = exports.obtenerPacienteId = exports.obtenerPacientes = exports.crearPaciente = exports.obtenerFotoPaciente = exports.eliminarFotoPaciente = exports.actualizarFotoPaciente = exports.uploadPacienteFoto = void 0;
+exports.desencriptarPacienteCompleto = desencriptarPacienteCompleto;
 const paciente_1 = require("../models/paciente");
 const dotenv_1 = __importDefault(require("dotenv"));
 const dayjs_1 = __importDefault(require("dayjs"));
@@ -332,40 +333,46 @@ const actualizarDatosPaciente = (req, res) => __awaiter(void 0, void 0, void 0, 
         }
         // Preparar objeto de actualización solo con los campos proporcionados
         const actualizaciones = {};
-        // Procesar solo los campos que vienen en el request
-        if (datosActualizados.direccion_domicilio)
-            actualizaciones.direccion_domicilio = (0, encriptado_1.encryptData)(datosActualizados.direccion_domicilio);
-        // Campos normales (sin encriptar)
-        [
-            "edad",
+        // Definir los campos que NO requieren encriptación
+        const camposSinEncriptar = [
             "tipo_documento",
-            "ciudad_expedicion",
-            "ciudad_domicilio",
-            "barrio",
-            "telefono",
-            "email",
-            "celular",
-            "ocupacion",
             "estado_civil",
-            "eps",
             "tipo_afiliacion",
-            "consentimiento_info",
-        ].forEach((campo) => {
-            if (campo in datosActualizados) {
-                actualizaciones[campo] = datosActualizados[campo];
-            }
-        });
-        // Campos que requieren encriptación
-        ["alergias", "antecedentes", "antecedentes_familiares"].forEach((campo) => {
-            if (campo in datosActualizados) {
+            "grupo_sanguineo",
+            "rh",
+            "sexo",
+            "fecha_nacimiento",
+            "consentimiento_info"
+        ];
+        // Procesar todos los campos que vienen en el request
+        Object.keys(datosActualizados).forEach((campo) => {
+            // Verificar si el campo requiere encriptación
+            if (!camposSinEncriptar.includes(campo)) {
+                // Encriptar el campo
                 actualizaciones[campo] = (0, encriptado_1.encryptData)(datosActualizados[campo]);
+            }
+            else {
+                // No encriptar campos específicos
+                actualizaciones[campo] = datosActualizados[campo];
             }
         });
         // Solo actualiza los campos que se proporcionaron
         yield paciente.update(actualizaciones);
-        return res.status(200).json({
-            message: "Paciente actualizado correctamente",
-        });
+        // Obtener el paciente actualizado
+        const pacienteActualizado = yield paciente_1.Paciente.findOne({ where: { numero_documento } });
+        // Desencriptar para la respuesta
+        if (pacienteActualizado) {
+            const pacienteDesencriptado = desencriptarPacienteCompleto(pacienteActualizado.toJSON());
+            return res.status(200).json({
+                message: "Paciente actualizado correctamente",
+                data: pacienteDesencriptado
+            });
+        }
+        else {
+            return res.status(200).json({
+                message: "Paciente actualizado correctamente"
+            });
+        }
     }
     catch (err) {
         console.error("Error:", err);

@@ -16,6 +16,17 @@ exports.obtenerUsuarios = exports.eliminarUsuarioId = exports.reestablecerContra
 const user_1 = require("../models/user");
 const bcrypt_1 = __importDefault(require("bcrypt"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
+const calcularProximaMedianoche = () => {
+    const ahora = new Date();
+    const medianoche = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate() + 1, // día siguiente
+    0, // hora 0 (medianoche)
+    0, // minutos
+    0, // segundos
+    0 // milisegundos
+    );
+    // Convertir a timestamp UNIX (segundos)
+    return Math.floor(medianoche.getTime() / 1000);
+};
 const registrarUsuario = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { correo, contrasena, nombre, rol } = req.body;
     const emailDomain = correo.split("@")[1];
@@ -77,8 +88,8 @@ const iniciarSesion = (req, res) => __awaiter(void 0, void 0, void 0, function* 
     const token = jsonwebtoken_1.default.sign({
         Uid: user.Uid,
         correo: user.correo,
-    }, process.env.SECRET_KEY || "DxVj971V5CxBQGB7hDqwOenbRbbH4mrS", {
-        expiresIn: "30m",
+    }, process.env.ENCRYPTION_KEY || "", {
+        expiresIn: calcularProximaMedianoche() - Math.floor(Date.now() / 1000)
     });
     res.json({
         msg: "Usuario logeado con éxito",

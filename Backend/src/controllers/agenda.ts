@@ -6,7 +6,37 @@ import dayjs from "dayjs";
 import { Op } from "sequelize"; // Importar operadores de Sequelize
 import sequelize from "../database/connection";
 import { AgendaNoRegistrados } from "../models/agendaNoRegistrados";
-
+import { decryptData, encryptData } from "./encriptado";
+import { desencriptarPacienteCompleto } from './paciente';
+function desencriptarAgenda(agenda: any): any {
+  if (!agenda) return agenda;
+  
+  // Lista de campos que NO requieren desencriptación
+  const camposSinDesencriptar = [
+    'Aid', 'fecha_cita', 'hora_cita', 'estado', 'correo',
+    'numero_documento', 'createdAt', 'updatedAt', 'duracion'
+  ];
+  
+  // Clonar el objeto para no modificar el original
+  const agendaDesencriptada = { ...agenda };
+  
+  // Desencriptar todos los campos excepto los que están en la lista de exclusión
+  Object.keys(agendaDesencriptada).forEach(campo => {
+    if (!camposSinDesencriptar.includes(campo) && agendaDesencriptada[campo]) {
+      try {
+        // Verificar si parece un texto encriptado
+        if (typeof agendaDesencriptada[campo] === 'string' && 
+            agendaDesencriptada[campo].match(/^[A-Za-z0-9+/=]{20,}$/)) {
+          agendaDesencriptada[campo] = decryptData(agendaDesencriptada[campo]);
+        }
+      } catch (error) {
+        console.error(`Error al desencriptar campo ${campo} en agenda:`, error);
+      }
+    }
+  });
+  
+  return agendaDesencriptada;
+}
 export const crearCita = async (req: Request, res: Response): Promise<any> => {
   const {
     correo,
@@ -230,9 +260,19 @@ export const actualizarCita = async (
       actualizaciones.estado = datosActualizados.estado;
     }
 
-    // Descripción
+    // Descripción - Encriptar al actualizar
     if (datosActualizados.descripcion !== undefined) {
-      actualizaciones.descripcion = datosActualizados.descripcion;
+      actualizaciones.descripcion = encryptData(datosActualizados.descripcion);
+    }
+    
+    // Teléfono - Encriptar al actualizar
+    if (datosActualizados.telefono !== undefined) {
+      actualizaciones.telefono = encryptData(datosActualizados.telefono);
+    }
+    
+    // Duración
+    if (datosActualizados.duracion !== undefined) {
+      actualizaciones.duracion = datosActualizados.duracion;
     }
 
     // 4. Si no hay nada que actualizar, retornar error
@@ -347,10 +387,28 @@ export const actualizarCita = async (
 
     // 6. Actualizar la cita con los campos proporcionados
     await cita.update(actualizaciones);
+    
+    // 7. Obtener la cita actualizada para desencriptarla
+    const citaActualizada = await Agenda.findByPk(Aid, {
+      include: [
+        { model: User, as: "doctor" },
+        { model: Paciente, as: "paciente" }
+      ]
+    });
+    
+    if (!citaActualizada) {
+      return res.status(404).json({
+        message: "Error al obtener la cita actualizada"
+      });
+    }
+    
+    // 8. Desencriptar datos para la respuesta
+    const citaJSON = citaActualizada.toJSON();
+    const citaDesencriptada = desencriptarAgenda(citaJSON);
 
     return res.status(200).json({
       message: "Cita actualizada correctamente",
-      data: cita,
+      data: citaDesencriptada,
     });
   } catch (err: any) {
     console.error("Error actualizando cita:", err);
@@ -408,9 +466,22 @@ export const obtenerCitas = async (
       ],
     });
 
+    // Desencriptar los datos de todas las citas
+    const citasDesencriptadas = citas.map(cita => {
+      const citaJSON = cita.toJSON();
+      const citaDesencriptada = desencriptarAgenda(citaJSON);
+      
+      // Si el paciente tiene datos encriptados y existe la función para desencriptarlos
+      if (citaDesencriptada.paciente && typeof desencriptarPacienteCompleto === 'function') {
+        citaDesencriptada.paciente = desencriptarPacienteCompleto(citaDesencriptada.paciente);
+      }
+      
+      return citaDesencriptada;
+    });
+
     return res.status(200).json({
       message: "Citas obtenidas correctamente",
-      data: citas,
+      data: citasDesencriptadas,
     });
   } catch (err: any) {
     console.error("Error obteniendo las citas:", err);
@@ -420,7 +491,6 @@ export const obtenerCitas = async (
     });
   }
 };
-
 export const obtenerCitasPorDoctor = async (
   req: Request,
   res: Response
@@ -436,9 +506,23 @@ export const obtenerCitasPorDoctor = async (
         { model: Paciente, as: "paciente" },
       ],
     });
+    
+    // Desencriptar los datos de todas las citas
+    const citasDesencriptadas = citas.map(cita => {
+      const citaJSON = cita.toJSON();
+      const citaDesencriptada = desencriptarAgenda(citaJSON);
+      
+      // Si hay datos de paciente disponibles
+      if (citaDesencriptada.paciente && typeof desencriptarPacienteCompleto === 'function') {
+        citaDesencriptada.paciente = desencriptarPacienteCompleto(citaDesencriptada.paciente);
+      }
+      
+      return citaDesencriptada;
+    });
+    
     return res.status(200).json({
       message: "Citas obtenidas correctamente",
-      data: citas,
+      data: citasDesencriptadas,
     });
   } catch (err: any) {
     res.status(500).json({
@@ -468,7 +552,7 @@ export const obtenerCitasPorPaciente = async (
       where: {
         numero_documento
       },
-      attributes: ['Aid', 'fecha_cita', 'hora_cita', 'estado', 'descripcion', 'duracion'],
+      attributes: ['Aid', 'fecha_cita', 'hora_cita', 'estado', 'descripcion', 'telefono', 'duracion'],
       include: [
         { 
           model: User, 
@@ -489,10 +573,15 @@ export const obtenerCitasPorPaciente = async (
       });
     }
 
+    // Desencriptar cada cita antes de enviarla
+    const citasDesencriptadas = citas.map(cita => 
+      desencriptarAgenda(cita.toJSON())
+    );
+
     return res.status(200).json({
       message: "Citas del paciente obtenidas correctamente",
       total_citas: citas.length,
-      data: citas
+      data: citasDesencriptadas
     });
   } catch (err: any) {
     console.error("Error obteniendo las citas del paciente:", err);
@@ -501,7 +590,6 @@ export const obtenerCitasPorPaciente = async (
       error: err.message
     });
   }
-  
 };
 export const getHorasOcupadas = async (
   req: Request,

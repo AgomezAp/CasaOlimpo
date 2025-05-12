@@ -416,46 +416,49 @@ export const actualizarDatosPaciente = async (
     // Preparar objeto de actualización solo con los campos proporcionados
     const actualizaciones: any = {};
 
-    // Procesar solo los campos que vienen en el request
-    if (datosActualizados.direccion_domicilio)
-      actualizaciones.direccion_domicilio = encryptData(
-        datosActualizados.direccion_domicilio
-      );
+    // Definir los campos que NO requieren encriptación
+    const camposSinEncriptar = [
+      "tipo_documento", 
+      "estado_civil", 
+      "tipo_afiliacion", 
+      "grupo_sanguineo", 
+      "rh", 
+      "sexo", 
+      "fecha_nacimiento",
+      "consentimiento_info"
+    ];
 
-    // Campos normales (sin encriptar)
-    [
-      "edad",
-      "tipo_documento",
-      "ciudad_expedicion",
-      "ciudad_domicilio",
-      "barrio",
-      "telefono",
-      "email",
-      "celular",
-      "ocupacion",
-      "estado_civil",
-      "eps",
-      "tipo_afiliacion",
-      "consentimiento_info",
-    ].forEach((campo) => {
-      if (campo in datosActualizados) {
-        actualizaciones[campo] = datosActualizados[campo];
-      }
-    });
-
-    // Campos que requieren encriptación
-    ["alergias", "antecedentes", "antecedentes_familiares"].forEach((campo) => {
-      if (campo in datosActualizados) {
+    // Procesar todos los campos que vienen en el request
+    Object.keys(datosActualizados).forEach((campo) => {
+      // Verificar si el campo requiere encriptación
+      if (!camposSinEncriptar.includes(campo)) {
+        // Encriptar el campo
         actualizaciones[campo] = encryptData(datosActualizados[campo]);
+      } else {
+        // No encriptar campos específicos
+        actualizaciones[campo] = datosActualizados[campo];
       }
     });
 
     // Solo actualiza los campos que se proporcionaron
     await paciente.update(actualizaciones);
-
-    return res.status(200).json({
-      message: "Paciente actualizado correctamente",
-    });
+    
+    // Obtener el paciente actualizado
+    const pacienteActualizado = await Paciente.findOne({ where: { numero_documento } });
+    
+    // Desencriptar para la respuesta
+    if (pacienteActualizado) {
+      const pacienteDesencriptado = desencriptarPacienteCompleto(pacienteActualizado.toJSON());
+      
+      return res.status(200).json({
+        message: "Paciente actualizado correctamente",
+        data: pacienteDesencriptado
+      });
+    } else {
+      return res.status(200).json({
+        message: "Paciente actualizado correctamente"
+      });
+    }
   } catch (err: any) {
     console.error("Error:", err);
     res.status(500).json({
@@ -649,7 +652,7 @@ export const transferirPaciente = async (
     });
   }
 };
-function desencriptarPacienteCompleto(pacienteJSON: any): any {
+export function desencriptarPacienteCompleto(pacienteJSON: any): any {
   // Lista de campos que NO se desencriptan
   const camposNoEncriptados = [
     "Pid",

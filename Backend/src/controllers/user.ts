@@ -2,8 +2,21 @@ import { User } from "../models/user";
 import bcrypt from "bcrypt";
 import { Request, Response } from "express";
 import jwt from "jsonwebtoken";
-import { decryptData, encryptData } from "./encriptado";
 
+const calcularProximaMedianoche = (): number => {
+  const ahora = new Date();
+  const medianoche = new Date(
+    ahora.getFullYear(),
+    ahora.getMonth(),
+    ahora.getDate() + 1, // día siguiente
+    0, // hora 0 (medianoche)
+    0, // minutos
+    0, // segundos
+    0  // milisegundos
+  );
+  // Convertir a timestamp UNIX (segundos)
+  return Math.floor(medianoche.getTime() / 1000);
+};
 
 export const registrarUsuario = async (
   req: Request,
@@ -80,9 +93,9 @@ export const iniciarSesion = async (req: Request,res: Response): Promise<any> =>
       Uid: user.Uid,
       correo: user.correo,
     },
-    process.env.SECRET_KEY || "DxVj971V5CxBQGB7hDqwOenbRbbH4mrS",
+    process.env.ENCRYPTION_KEY || "",
     {
-      expiresIn: "30m",
+       expiresIn: calcularProximaMedianoche() - Math.floor(Date.now() / 1000)
     }
   );
   res.json({
