@@ -552,7 +552,8 @@ export const obtenerCitasPorPaciente = async (
       where: {
         numero_documento
       },
-      attributes: ['Aid', 'fecha_cita', 'hora_cita', 'estado', 'descripcion', 'telefono', 'duracion'],
+      // MODIFICAR ESTA LÍNEA - Eliminar 'telefono' del array de atributos
+      attributes: ['Aid', 'fecha_cita', 'hora_cita', 'estado', 'descripcion', 'duracion'],
       include: [
         { 
           model: User, 
