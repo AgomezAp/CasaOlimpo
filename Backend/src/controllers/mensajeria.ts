@@ -2,48 +2,11 @@ import { Request, Response } from 'express';
 import { Paciente } from '../models/paciente';
 import { json, Op, Sequelize } from 'sequelize';
 import schedule from 'node-schedule';
-// import qrcode from 'qrcode';
-// import { Server } from 'socket.io';
-import http from 'http'
-const server = http.createServer();
-// const io = new Server(server, {
-//     cors: {
-//         origin: "*"
-//     }
-// })
-
-let currentQr: string | null = null
 
 
-// export const serverwsocket = async (req: Request, res: Response): Promise<any> => {
-//     const checkUpdates = async () => {
-//         try {
-//             const newQr = await funNuevaSesion('1234');
-//             const qrDataURL = await qrcode.toDataURL(newQr);
-//             const qrCodeString = await qrcode.toString(qrDataURL, { type: 'terminal' , small: true});
 
-//             if(qrDataURL !== currentQr){
-//                 currentQr = qrDataURL;
-//                 io.emit('qr-update', qrCodeString);
-//             }
-//         } catch (error) {
-//             console.error('Error al actualizar QR16165', error);
-//         } 
-//     };
-//     setInterval(() => checkUpdates(), 5000);
 
-//     io.on('connection', (socket) => {
-//         console.log('Cliente conectado');
-//         if (currentQr) {
-//             socket.emit('qr-update', currentQr)
-//         }
-//     })
 
-//     server.listen(3001, () => {
-//         console.log('Websocket server en puerto 3001');
-//         checkUpdates();
-//     })
-// }
 
 export const enviarMensaje = async (req: Request, res: Response): Promise<any> => {
     try {
@@ -128,49 +91,6 @@ export const funVerificarSesion = async (): Promise<any> => {
     return total;
 }
 
-// export const nuevaSesion = async (req: Request, res: Response): Promise<any> => {
-//     try {
-//         const newQr = await funNuevaSesion('1234');
-//         const qrCodeString = await qrcode.toString(newQr, { type: 'terminal' , small: true});
-//         console.log(qrCodeString);
-//         res.status(200).json({qr: newQr})
-//     } catch (error) {
-//         console.error('Error al enviar el mensaje:', error);
-//         return res.status(500).json({ error: 'Error interno del servidor.' });
-//     }
-// }
-
-// export const funNuevaSesion = async (sesion: string): Promise<any> => {
-//     const apiResponse = await fetch(`${process.env.SERVER_MENSAJERIA}/api/whatsapp/CrearCliente`, {
-//         method: 'POST',
-//         headers: {
-//             'Content-Type': 'application/json',
-//             'Origin': '181.129.218.198'
-//         },
-//         body: JSON.stringify({
-//             sessionId: "1234"
-//         })
-//     })
-//     const qr = await apiResponse.json()
-//     console.log(qr.qr)
-//     return await qr.qr
-// }
-
-// export const eliminarSesion = async (req: Request, res: Response): Promise<any> => {
-//     try {
-//         const apiResponse = await fetch(`${process.env.SERVER_MENSAJERIA}/api/whatsapp/eliminarClientes`, {
-//             method: 'DELETE',
-//             headers: {
-//                 'Content-type': 'application/json',
-//                 'Origin': '181.129.218.198'
-//             }
-//         })
-//         return res.status(200).json({data: apiResponse, mensaje: 'Todas las sesiones han sido eliminadas'})
-//     } catch (error) {
-//         console.error('Error al eliminar la sesion:', error);
-//         return res.status(500).json({ error: 'Error interno del servidor.' });
-//     }
-// }
 
 export const obtenerFecha = async (req: Request,res: Response): Promise<any> => {
     try {
