@@ -14,8 +14,8 @@ console.log(mensaje)
 //     }
 //     timezone: "America/Bogota"
 // })
-
-cron.schedule('* * * * *', async () => {
+let [hora, minuto] = mensaje.hora.split(':').map(Number);
+cron.schedule(`${minuto} ${hora} * * *`, async () => {
     console.log("tareaejecutandose")
     try {
         const pacientes = await funObtenerFecha()

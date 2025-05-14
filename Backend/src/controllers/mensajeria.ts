@@ -140,37 +140,37 @@ export const funVerificarSesion = async (): Promise<any> => {
 //     }
 // }
 
-export const funNuevaSesion = async (sesion: string): Promise<any> => {
-    const apiResponse = await fetch(`${process.env.SERVER_MENSAJERIA}/api/whatsapp/CrearCliente`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Origin': '181.129.218.198'
-        },
-        body: JSON.stringify({
-            sessionId: "1234"
-        })
-    })
-    const qr = await apiResponse.json()
-    console.log(qr.qr)
-    return await qr.qr
-}
+// export const funNuevaSesion = async (sesion: string): Promise<any> => {
+//     const apiResponse = await fetch(`${process.env.SERVER_MENSAJERIA}/api/whatsapp/CrearCliente`, {
+//         method: 'POST',
+//         headers: {
+//             'Content-Type': 'application/json',
+//             'Origin': '181.129.218.198'
+//         },
+//         body: JSON.stringify({
+//             sessionId: "1234"
+//         })
+//     })
+//     const qr = await apiResponse.json()
+//     console.log(qr.qr)
+//     return await qr.qr
+// }
 
-export const eliminarSesion = async (req: Request, res: Response): Promise<any> => {
-    try {
-        const apiResponse = await fetch(`${process.env.SERVER_MENSAJERIA}/api/whatsapp/eliminarClientes`, {
-            method: 'DELETE',
-            headers: {
-                'Content-type': 'application/json',
-                'Origin': '181.129.218.198'
-            }
-        })
-        return res.status(200).json({data: apiResponse, mensaje: 'Todas las sesiones han sido eliminadas'})
-    } catch (error) {
-        console.error('Error al eliminar la sesion:', error);
-        return res.status(500).json({ error: 'Error interno del servidor.' });
-    }
-}
+// export const eliminarSesion = async (req: Request, res: Response): Promise<any> => {
+//     try {
+//         const apiResponse = await fetch(`${process.env.SERVER_MENSAJERIA}/api/whatsapp/eliminarClientes`, {
+//             method: 'DELETE',
+//             headers: {
+//                 'Content-type': 'application/json',
+//                 'Origin': '181.129.218.198'
+//             }
+//         })
+//         return res.status(200).json({data: apiResponse, mensaje: 'Todas las sesiones han sido eliminadas'})
+//     } catch (error) {
+//         console.error('Error al eliminar la sesion:', error);
+//         return res.status(500).json({ error: 'Error interno del servidor.' });
+//     }
+// }
 
 export const obtenerFecha = async (req: Request,res: Response): Promise<any> => {
     try {
