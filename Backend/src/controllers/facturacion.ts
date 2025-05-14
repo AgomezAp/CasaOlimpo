@@ -50,7 +50,7 @@ import { crearPDF } from '../services/facturacion';
 // }
 export const crearFactura = async (req: Request, res: Response): Promise<any> => {
     try {
-        const { numero_documento, tipo_pago, total } = req.body;
+        const { numero_documento, tipo_pago, total, procedimiento } = req.body;
         
         if (!numero_documento || !tipo_pago || !total) {
             return res.status(400).json({ success: false, message: 'Todos los campos son obligatorios' });
@@ -63,13 +63,14 @@ export const crearFactura = async (req: Request, res: Response): Promise<any> =>
 
         const nuevaFactura = await Factura.create({ 
             numero_documento, 
-            tipo_pago, 
+            tipo_pago,
+            procedimiento, 
             total 
         });
         
         // Generar PDF
         const pdfBuffer = await crearPDF(nuevaFactura, paciente);
-
+        console.log('Creando pdf...')
         // Opción 1: Enviar por correo
         // await sendMail([paciente.email], `Factura #${nuevaFactura.id}`, 'Adjunto su factura', pdfBuffer);
 
