@@ -24,6 +24,10 @@ Factura.init({
             key: 'numero_documento'
         },
     },
+    procedimiento: {
+        type: sequelize_1.DataTypes.STRING,
+        allowNull: false,
+    },
     tipo_pago: {
         type: sequelize_1.DataTypes.ENUM('Efectivo', 'Tarjeta Débito', 'Tarjeta Crédito', 'Transferencia'),
         allowNull: false,

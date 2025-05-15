@@ -13,38 +13,36 @@ exports.facturaById = exports.verFacturas = exports.crearFactura = void 0;
 const paciente_1 = require("../models/paciente");
 const facturacion_1 = require("../models/facturacion");
 const facturacion_2 = require("../services/facturacion");
-const crearFactura = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        const { numero_documento, tipo_pago, total } = req.body;
-        const producto = { descripcion: 'facturacion de prueba', precio: total };
-        if (!numero_documento || !tipo_pago || !total) {
-            return res.status(400).json({ success: false, message: 'Todos los campos son obligatorios' });
-        }
-        const paciente = yield paciente_1.Paciente.findOne({
-            where: { numero_documento },
-        });
-        if (!paciente) {
-            return res.status(404).json({ success: false, message: "El paciente no existe", });
-        }
-        const nuevaFactura = yield facturacion_1.Factura.create({
-            numero_documento,
-            tipo_pago,
-            total
-        });
-        const pdfBuffer = yield (0, facturacion_2.crearPDF)({
-            factura: nuevaFactura,
-            paciente: paciente,
-            producto: producto
-        });
-        res.setHeader('Content-Type', 'application/pdf');
-        res.send(pdfBuffer);
-    }
-    catch (error) {
-        console.error('Error al crear la factura:', error);
-        return res.status(500).json({ error: 'Error interno del servidor.' });
-    }
-});
-exports.crearFactura = crearFactura;
+// export const crearFactura = async (req: Request, res:Response): Promise<any> => {
+//     try {
+//         const { numero_documento, tipo_pago, total } = req.body;
+//         const producto = {descripcion: 'facturacion de prueba', precio: total}
+//         if (!numero_documento || !tipo_pago || !total ) {
+//             return res.status(400).json({success: false , message: 'Todos los campos son obligatorios'} );
+//         }
+//         const paciente = await Paciente.findOne({
+//             where: {numero_documento},
+//         });
+//         if (!paciente){
+//             return res.status(404).json({success: false ,message: "El paciente no existe",});
+//         }
+//         const nuevaFactura = await Factura.create({
+//             numero_documento,
+//             tipo_pago,
+//             total
+//         });
+//         const pdfBuffer = await crearPDF({
+//             factura: nuevaFactura,
+//             paciente: paciente,
+//             producto: producto
+//         });
+//         res.setHeader('Content-Type', 'application/pdf');
+//         res.send(pdfBuffer)
+//     } catch (error) {
+//         console.error('Error al crear la factura:', error);
+//         return res.status(500).json({ error: 'Error interno del servidor.' });
+//     }
+// }
 // export const reimprimir = async (req: Request, res: Response): Promise<any> => {
 //     try {
 //         const { Fid } = req.body;
@@ -59,6 +57,38 @@ exports.crearFactura = crearFactura;
 //         return res.status(500).json({ error: 'Error interno del servidor.' });
 //     }
 // }
+const crearFactura = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { numero_documento, tipo_pago, total, procedimiento } = req.body;
+        if (!numero_documento || !tipo_pago || !total) {
+            return res.status(400).json({ success: false, message: 'Todos los campos son obligatorios' });
+        }
+        const paciente = yield paciente_1.Paciente.findOne({ where: { numero_documento } });
+        if (!paciente) {
+            return res.status(404).json({ success: false, message: "El paciente no existe" });
+        }
+        const nuevaFactura = yield facturacion_1.Factura.create({
+            numero_documento,
+            tipo_pago,
+            procedimiento,
+            total
+        });
+        // Generar PDF
+        const pdfBuffer = yield (0, facturacion_2.crearPDF)(nuevaFactura, paciente);
+        console.log('Creando pdf...');
+        // Opción 1: Enviar por correo
+        // await sendMail([paciente.email], `Factura #${nuevaFactura.id}`, 'Adjunto su factura', pdfBuffer);
+        // Opción 2: Descargar directamente
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="Factura-${nuevaFactura.Fid}.pdf"`);
+        res.send(pdfBuffer);
+    }
+    catch (error) {
+        console.error('Error al crear la factura:', error);
+        return res.status(500).json({ error: 'Error interno del servidor.' });
+    }
+});
+exports.crearFactura = crearFactura;
 const verFacturas = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const facturas = yield facturacion_1.Factura.findAll();
