@@ -6,6 +6,7 @@ import { Paciente } from "./paciente";
 export class Factura extends Model{
     public Fid!:Number;
     public numero_documento!:string;
+    public procedimiento!: string;
     public tipo_pago!: 'Efectivo' | 'Tarjeta Débito' | 'Tarjeta Crédito' | 'Transferencia';
     public total!: number;
 }
@@ -24,6 +25,10 @@ Factura.init(
                 model: 'Paciente',
                 key: 'numero_documento'
             },
+        },
+        procedimiento: {
+            type: DataTypes.STRING,
+            allowNull: false,
         },
         tipo_pago: {
             type: DataTypes.ENUM('Efectivo', 'Tarjeta Débito', 'Tarjeta Crédito', 'Transferencia'),
