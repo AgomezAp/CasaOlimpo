@@ -58,7 +58,7 @@ exports.uploadConsentimiento = upload.single('consentimiento_info');
 const nuevaConsulta = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { numero_documento } = req.params;
-        const { motivo, enfermedad_actual, objetivos_terapia, historia_problema, tipo_diagnostico, plan_tratamiento, recomendaciones, fecha, contraindicaciones, abierto, Uid } = req.body;
+        const { motivo, enfermedad_actual, objetivos_terapia, historia_problema, tipo_diagnostico, recomendaciones, fecha, contraindicaciones, abierto, Uid } = req.body;
         const consentimientoArchivo = req.file ? req.file.buffer : null;
         if (!Uid) {
             return res.status(400).json({
@@ -107,7 +107,6 @@ const nuevaConsulta = (req, res) => __awaiter(void 0, void 0, void 0, function* 
             objetivos_terapia: (0, encriptado_1.encryptData)(objetivos_terapia),
             historia_problema: (0, encriptado_1.encryptData)(historia_problema),
             tipo_diagnostico: (0, encriptado_1.encryptData)(tipo_diagnostico),
-            plan_tratamiento: (0, encriptado_1.encryptData)(plan_tratamiento),
             contraindicaciones: (0, encriptado_1.encryptData)(contraindicaciones),
             recomendaciones: (0, encriptado_1.encryptData)(recomendaciones),
             fecha: fecha || new Date(),
@@ -177,7 +176,7 @@ const updateConsulta = (req, res) => __awaiter(void 0, void 0, void 0, function*
         const datosEncriptados = {};
         // Lista de campos que deben encriptarse
         const camposAEncriptar = ['motivo', 'enfermedad_actual', 'objetivos_terapia',
-            'historia_problema', 'tipo_diagnostico', 'plan_tratamiento',
+            'historia_problema', 'tipo_diagnostico', '',
             'contraindicaciones', 'recomendaciones'];
         // Procesar cada campo en la actualización
         Object.keys(updatedData).forEach(campo => {

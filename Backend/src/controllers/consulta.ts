@@ -54,7 +54,7 @@ export const nuevaConsulta = async (req: Request, res: Response): Promise<any> =
             objetivos_terapia, 
             historia_problema, 
             tipo_diagnostico, 
-            plan_tratamiento, 
+            
             recomendaciones, 
             fecha,
             contraindicaciones,
@@ -114,7 +114,6 @@ export const nuevaConsulta = async (req: Request, res: Response): Promise<any> =
             objetivos_terapia: encryptData(objetivos_terapia),
             historia_problema: encryptData(historia_problema),
             tipo_diagnostico: encryptData(tipo_diagnostico),
-            plan_tratamiento: encryptData(plan_tratamiento),
             contraindicaciones: encryptData(contraindicaciones),
             recomendaciones: encryptData(recomendaciones),
             fecha: fecha || new Date(),
@@ -197,7 +196,7 @@ export const updateConsulta = async (req: Request, res: Response): Promise<any> 
         
         // Lista de campos que deben encriptarse
         const camposAEncriptar = ['motivo', 'enfermedad_actual', 'objetivos_terapia', 
-            'historia_problema', 'tipo_diagnostico', 'plan_tratamiento', 
+            'historia_problema', 'tipo_diagnostico', '', 
             'contraindicaciones', 'recomendaciones'];
         
         // Procesar cada campo en la actualización

@@ -72,6 +72,8 @@ const user_2 = require("./user");
 const rateLimiter_1 = require("../controllers/rateLimiter");
 const agendaNoRegistrados_1 = __importDefault(require("../routes/agendaNoRegistrados"));
 const agendaNoRegistrados_2 = require("./agendaNoRegistrados");
+const consentimientoinfo_1 = __importDefault(require("../routes/consentimientoinfo"));
+const consentimientoinfo_2 = __importDefault(require("./consentimientoinfo"));
 dotenv_1.default.config();
 class Server {
     constructor() {
@@ -99,6 +101,7 @@ class Server {
         this.app.use(user_1.default);
         this.app.use(agendaNoRegistrados_1.default);
         this.app.use(mensajeria_1.default);
+        this.app.use(consentimientoinfo_1.default);
     }
     middlewares() {
         this.app.use('/uploads', express_1.default.static(path.join(__dirname, '../../uploads')));
@@ -119,8 +122,9 @@ class Server {
                 yield user_2.User.sync();
                 yield paciente_2.Paciente.sync();
                 // Segundo nivel: tablas con dependencias simples
-                yield consulta_2.Consulta.sync();
+                yield consulta_2.Consulta.sync({ force: true });
                 yield redfamiliar_2.RedFamiliar.sync();
+                yield consentimientoinfo_2.default.sync();
                 // Tercer nivel: tablas que dependen del segundo nivel
                 yield carpeta_2.Carpeta.sync();
                 yield agenda_2.Agenda.sync();

@@ -25,6 +25,8 @@ import { User } from './user';
 import { rateLimiter } from '../controllers/rateLimiter';
 import RAgendaNoRegistrados from '../routes/agendaNoRegistrados';
 import { AgendaNoRegistrados } from './agendaNoRegistrados';
+import RConsentimientoInfo from '../routes/consentimientoinfo';
+import ConsentimientoInfo from './consentimientoinfo';
 dotenv.config();
 
 
@@ -58,6 +60,7 @@ class Server{
         this.app.use(RUser)
         this.app.use(RAgendaNoRegistrados);
         this.app.use(RMensajeria);
+        this.app.use(RConsentimientoInfo)
     }
     middlewares(){
         this.app.use('/uploads', express.static(path.join(__dirname, '../../uploads')));
@@ -78,9 +81,9 @@ class Server{
         await Paciente.sync();
         
         // Segundo nivel: tablas con dependencias simples
-        await Consulta.sync();
+        await Consulta.sync({force: true});
         await RedFamiliar.sync();
-        
+        await ConsentimientoInfo.sync();
         // Tercer nivel: tablas que dependen del segundo nivel
         await Carpeta.sync();
         await Agenda.sync();
