@@ -119,13 +119,6 @@ function crearPDF(factura, paciente) {
                             { text: '', style: 'tableCell', alignment: 'right' },
                             { text: '', style: 'tableCell', alignment: 'center' },
                             { text: '', style: 'tableCell', alignment: 'right' }
-                        ],
-                        [
-                            { text: '', style: 'tableCell', alignment: 'center' },
-                            { text: '', style: 'tableCell' },
-                            { text: '', style: 'tableCell', alignment: 'right' },
-                            { text: '', style: 'tableCell', alignment: 'center' },
-                            { text: '', style: 'tableCell', alignment: 'right' }
                         ]
                     ]
                 },
@@ -218,7 +211,7 @@ function crearPDF(factura, paciente) {
                         alignment: 'center'
                     }
                 ],
-                margin: [40, 20, 40, 20], // Margen superior e inferior
+                margin: [40, 20, 40, 0], // Margen superior e inferior
                 style: 'footer'
             }
         ];
