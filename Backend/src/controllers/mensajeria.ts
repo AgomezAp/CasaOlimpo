@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { Paciente } from '../models/paciente';
 import { json, Op, Sequelize } from 'sequelize';
 import schedule from 'node-schedule';
+import {decryptData} from '../controllers/encriptado';
 
 
 
@@ -116,7 +117,12 @@ export const funObtenerFecha = async (): Promise<any[]> => {
             `${mes}-${dia}`
         )
     });
-    return clienteConMismaFecha
+    const pacientesDesencriptados = clienteConMismaFecha.map((paciente: any) => ({
+        ...paciente.toJSON(),
+        nombre: decryptData(paciente.nombre),
+        edad: decryptData(paciente.edad)
+    }));
+    return pacientesDesencriptados;
 }
 
 export let mensajeGuardado: {mensaje: any, hora: any} = {
