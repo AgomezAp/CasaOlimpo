@@ -120,6 +120,7 @@ export const funObtenerFecha = async (): Promise<any[]> => {
     const pacientesDesencriptados = clienteConMismaFecha.map((paciente: any) => ({
         ...paciente.toJSON(),
         nombre: decryptData(paciente.nombre),
+        apellidos: decryptData(paciente.apellidos),
         edad: decryptData(paciente.edad)
     }));
     return pacientesDesencriptados;
