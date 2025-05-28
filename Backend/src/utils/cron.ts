@@ -1,6 +1,7 @@
 import cron from 'node-cron';
 import { funObtenerFecha, funObtenerMensaje, funEnviarMensaje } from '../controllers/mensajeria';
 import { mensajeGuardado } from '../controllers/mensajeria';
+import { decryptData } from '../controllers/encriptado';
 const PHONE_MASTER = '' 
 const mensaje = typeof mensajeGuardado === 'string' ? JSON.parse(mensajeGuardado) : mensajeGuardado;
 // const [hora, minuto] = mensaje.hora.split(':').map(Number);
@@ -15,6 +16,7 @@ console.log(mensaje)
 //     timezone: "America/Bogota"
 // })
 let [hora, minuto] = mensaje.hora.split(':').map(Number);
+console.log(hora, minuto)
 cron.schedule(`${minuto} ${hora} * * *`, async () => {
     console.log("tareaejecutandose")
     try {
@@ -27,8 +29,8 @@ cron.schedule(`${minuto} ${hora} * * *`, async () => {
         const mensaje = mensajeGuardado.mensaje
         for (const paciente of pacientes) {
             try {
-                console.log(paciente.telefono, PHONE_MASTER, paciente.nombre, mensaje)
-                await funEnviarMensaje(paciente.telefono, PHONE_MASTER, paciente.nombre, mensaje)
+                console.log(PHONE_MASTER, decryptData(paciente.telefono),  decryptData(paciente.nombre), mensaje)
+                await funEnviarMensaje(PHONE_MASTER, decryptData(paciente.telefono), decryptData(paciente.nombre), mensaje)
             } catch (error) {
                 console.error('Error al enviar mensaje')
             }
