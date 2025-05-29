@@ -12,6 +12,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.mensajeToFront = exports.funObtenerMensaje = exports.obtenerMensaje = exports.mensajeGuardado = exports.funObtenerFecha = exports.obtenerFecha = exports.funVerificarSesion = exports.verificarSesion = exports.funEnviarMensaje = exports.enviarMensaje = void 0;
 const paciente_1 = require("../models/paciente");
 const sequelize_1 = require("sequelize");
+const encriptado_1 = require("../controllers/encriptado");
 const enviarMensaje = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { phoneNumberCliente, phoneNumberMaestro, nombreDelCliente, message } = req.body;
@@ -118,21 +119,21 @@ const funObtenerFecha = () => __awaiter(void 0, void 0, void 0, function* () {
     const clienteConMismaFecha = yield paciente_1.Paciente.findAll({
         where: sequelize_1.Sequelize.where(sequelize_1.Sequelize.fn('TO_CHAR', sequelize_1.Sequelize.col('fecha_nacimiento'), 'MM-DD'), `${mes}-${dia}`)
     });
-    return clienteConMismaFecha;
+    const pacientesDesencriptados = clienteConMismaFecha.map((paciente) => (Object.assign(Object.assign({}, paciente.toJSON()), { nombre: (0, encriptado_1.decryptData)(paciente.nombre), apellidos: (0, encriptado_1.decryptData)(paciente.apellidos), edad: (0, encriptado_1.decryptData)(paciente.edad) })));
+    return pacientesDesencriptados;
 });
 exports.funObtenerFecha = funObtenerFecha;
 exports.mensajeGuardado = {
-    mensaje: '¡Feliz cumpleaños! En Casa Olimpo, celebramos contigo este día especial. Que la luz de tu sonrisa brille aún más fuerte y que cada deseo de tu corazón se haga realidad. ¡Te enviamos un abrazo lleno de energía positiva!',
-    hora: "10:00"
+    mensaje: '¡Feliz cumpleaños! En Casa Olimpo, celebramos contigo este día especial. Que la luz de tu sonrisa brille aún más fuerte y que cada deseo de tu corazón se haga realidad. ¡Te enviamos un abrazo lleno de energía positiva!'
 };
 const obtenerMensaje = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     //Recibir cambio de mensaje
     try {
-        const { mensaje, hora } = req.body;
-        if (!mensaje || !hora) {
+        const { mensaje } = req.body;
+        if (!mensaje) {
             return res.status(400).json({ error: 'Todso los campos son obligatorios' });
         }
-        const resultado = yield (0, exports.funObtenerMensaje)(mensaje, hora);
+        const resultado = yield (0, exports.funObtenerMensaje)(mensaje);
         console.log(exports.mensajeGuardado);
         return res.status(200).json(resultado);
     }
@@ -142,9 +143,9 @@ const obtenerMensaje = (req, res) => __awaiter(void 0, void 0, void 0, function*
     }
 });
 exports.obtenerMensaje = obtenerMensaje;
-const funObtenerMensaje = (mensaje, hora) => __awaiter(void 0, void 0, void 0, function* () {
+const funObtenerMensaje = (mensaje) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        exports.mensajeGuardado = { mensaje, hora };
+        exports.mensajeGuardado = { mensaje };
         return exports.mensajeGuardado;
     }
     catch (error) {
@@ -154,9 +155,9 @@ const funObtenerMensaje = (mensaje, hora) => __awaiter(void 0, void 0, void 0, f
 });
 exports.funObtenerMensaje = funObtenerMensaje;
 const mensajeToFront = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a, _b;
+    var _a;
     //mostrar mensaje en el front
-    if (!exports.mensajeGuardado || (((_a = exports.mensajeGuardado.mensaje) === null || _a === void 0 ? void 0 : _a.trim()) === '' && ((_b = exports.mensajeGuardado.hora) === null || _b === void 0 ? void 0 : _b.trim()) === '')) {
+    if (!exports.mensajeGuardado || (((_a = exports.mensajeGuardado.mensaje) === null || _a === void 0 ? void 0 : _a.trim()) === '')) {
         exports.mensajeGuardado;
     }
     console.log(exports.mensajeGuardado);
