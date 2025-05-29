@@ -126,18 +126,17 @@ export const funObtenerFecha = async (): Promise<any[]> => {
     return pacientesDesencriptados;
 }
 
-export let mensajeGuardado: {mensaje: any, hora: any} = {
-    mensaje: '¡Feliz cumpleaños! En Casa Olimpo, celebramos contigo este día especial. Que la luz de tu sonrisa brille aún más fuerte y que cada deseo de tu corazón se haga realidad. ¡Te enviamos un abrazo lleno de energía positiva!',
-    hora: "10:00"
+export let mensajeGuardado: {mensaje: any} = {
+    mensaje: '¡Feliz cumpleaños! En Casa Olimpo, celebramos contigo este día especial. Que la luz de tu sonrisa brille aún más fuerte y que cada deseo de tu corazón se haga realidad. ¡Te enviamos un abrazo lleno de energía positiva!'
 };
 export const obtenerMensaje = async (req: Request, res: Response): Promise<any> => {
     //Recibir cambio de mensaje
     try {
-        const { mensaje, hora} = req.body;
-        if (!mensaje || !hora) {
+        const { mensaje} = req.body;
+        if (!mensaje) {
             return res.status(400).json({error: 'Todso los campos son obligatorios'})
         }
-        const resultado = await funObtenerMensaje(mensaje, hora)
+        const resultado = await funObtenerMensaje(mensaje)
         console.log(mensajeGuardado)
         return res.status(200).json(resultado)
     } catch (error) {
@@ -146,9 +145,9 @@ export const obtenerMensaje = async (req: Request, res: Response): Promise<any> 
     }
 }
 
-export const funObtenerMensaje = async (mensaje: string, hora: string): Promise<{mensaje: string; hora: string}> => {
+export const funObtenerMensaje = async (mensaje: string): Promise<{mensaje: string }> => {
     try {
-        mensajeGuardado = {mensaje, hora};
+        mensajeGuardado = {mensaje};
         return mensajeGuardado;
     } catch (error) {
         console.error('Error al guardar el mensaje', error)
@@ -158,7 +157,7 @@ export const funObtenerMensaje = async (mensaje: string, hora: string): Promise<
 
 export const mensajeToFront = async (req: Request, res: Response): Promise<any> => {
     //mostrar mensaje en el front
-    if (!mensajeGuardado || (mensajeGuardado.mensaje?.trim() === '' && mensajeGuardado.hora?.trim()=== '')) {
+    if (!mensajeGuardado || (mensajeGuardado.mensaje?.trim() === '')) {
         mensajeGuardado
     }
     console.log(mensajeGuardado)
